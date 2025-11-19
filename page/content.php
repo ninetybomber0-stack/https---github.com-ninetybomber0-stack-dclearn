@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/connect.php';
 
 // --- REFACTORED DATA FETCHING ---
 function toSeconds(string $timeStr): int {
-    if (!str_contains($timeStr, ':')) return (int)$timeStr;
+    if (strpos($timeStr, ':') === false) return (int)$timeStr;
     $parts = explode(':', $timeStr);
     return count($parts) === 2 ? ((int)$parts[0] * 60) + (int)$parts[1] : 0;
 }
@@ -33,15 +33,22 @@ if ($content_result) {
 
         // ดึง Transcript สำหรับบทเรียนนี้
         $transcript = [];
-        // Assuming tb_transcripts has a lesson_id column that is a number.
-        $stmt_t = $mysqli->prepare("SELECT * FROM tb_transcripts WHERE lesson_id = ? ORDER BY cue_time ASC");
-        $stmt_t->bind_param('i', $lesson_id);
-        $stmt_t->execute();
-        $transcript_result = $stmt_t->get_result();
-        while ($t = $transcript_result->fetch_assoc()) {
-            $transcript[] = ['t' => (int)$t['cue_time'], 'text' => $t['text']];
+        // Use lesson_id_text as per schema in update_schema.sql
+        $stmt_t = $mysqli->prepare("SELECT * FROM tb_transcripts WHERE lesson_id_text = ? ORDER BY cue_time ASC");
+        
+        if ($stmt_t) {
+            $lid_text = $lesson['lesson_id_text'];
+            $stmt_t->bind_param('s', $lid_text);
+            $stmt_t->execute();
+            $transcript_result = $stmt_t->get_result();
+            while ($t = $transcript_result->fetch_assoc()) {
+                $transcript[] = ['t' => (int)$t['cue_time'], 'text' => $t['text']];
+            }
+            $stmt_t->close();
+        } else {
+            // Table might not exist or schema mismatch. Log error to allow debugging without crash.
+            error_log("Transcript query failed: " . $mysqli->error);
         }
-        $stmt_t->close();
 
         // ประกอบข้อมูลสำหรับ JavaScript
         $lessons_data[] = [
