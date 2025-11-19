@@ -1,0 +1,380 @@
+<?php
+// 1. เชื่อมต่อฐานข้อมูล
+require_once __DIR__ . '/../config/connect.php';
+
+// --- REFACTORED DATA FETCHING ---
+function toSeconds(string $timeStr): int {
+    if (!str_contains($timeStr, ':')) return (int)$timeStr;
+    $parts = explode(':', $timeStr);
+    return count($parts) === 2 ? ((int)$parts[0] * 60) + (int)$parts[1] : 0;
+}
+
+$lessons_data = [];
+$content_result = $mysqli->query("SELECT * FROM tb_content ORDER BY lesson_order ASC, id ASC");
+
+if ($content_result) {
+    while ($lesson = $content_result->fetch_assoc()) {
+        $lesson_id = (int)$lesson['id'];
+        
+        // ดึงคำถามสำหรับบทเรียนนี้
+        $questions = [];
+        $stmt_q = $mysqli->prepare("SELECT * FROM tb_test WHERE lesson_id = ?");
+        $stmt_q->bind_param('i', $lesson_id);
+        $stmt_q->execute();
+        $questions_result = $stmt_q->get_result();
+        while ($q = $questions_result->fetch_assoc()) {
+            $questions[] = [
+                'id' => $q['id'], 'question' => $q['question'],
+                'choices' => ['A' => $q['option1'], 'B' => $q['option2'], 'C' => $q['option3'], 'D' => $q['option4']],
+                'correct' => $q['correct'], 'timeshow' => toSeconds($q['timeshow']), 'shown' => false
+            ];
+        }
+        $stmt_q->close();
+
+        // ดึง Transcript สำหรับบทเรียนนี้
+        $transcript = [];
+        // Assuming tb_transcripts has a lesson_id column that is a number.
+        $stmt_t = $mysqli->prepare("SELECT * FROM tb_transcripts WHERE lesson_id = ? ORDER BY cue_time ASC");
+        $stmt_t->bind_param('i', $lesson_id);
+        $stmt_t->execute();
+        $transcript_result = $stmt_t->get_result();
+        while ($t = $transcript_result->fetch_assoc()) {
+            $transcript[] = ['t' => (int)$t['cue_time'], 'text' => $t['text']];
+        }
+        $stmt_t->close();
+
+        // ประกอบข้อมูลสำหรับ JavaScript
+        $lessons_data[] = [
+            'id' => $lesson['lesson_id_text'] ?? "lesson-{$lesson_id}",
+            'db_id' => $lesson_id,
+            'title' => $lesson['title'] ?? $lesson['name'],
+            'slide' => $lesson['slide_url'] ?? '#',
+            'quiz' => $lesson['quiz_url'] ?? '#',
+            'sources' => [
+                // FIX: Use 'video_file' column which exists in tb_content
+                '720' => '/videos/' . ltrim($lesson['copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4'] ?? '', '/'),
+                '480' => '/videos/' . ltrim($lesson['copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4'] ?? '', '/') 
+            ],
+            'poster' => $lesson['poster_path'] ?? '',
+            'transcript' => $transcript,
+            'questions' => $questions
+        ];
+    }
+}
+
+// --- บังคับให้บทที่ 1 ใช้วิดีโอที่กำหนด ---
+foreach ($lessons_data as $index => $lesson) {
+    if ($lesson['db_id'] == 1) { // ตรวจสอบว่าเป็นบทที่ 1 หรือไม่
+        // กำหนดไฟล์วิดีโอสำหรับบทที่ 1 โดยเฉพาะ
+        $lessons_data[$index]['sources']['720'] = '/videos/copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4';
+        break; // หยุด loop เมื่อเจอและแก้ไขแล้ว
+    }
+}
+// -----------------------------------------
+
+// --- DEBUG LOGGING ---
+// เพิ่มโค้ดนี้เพื่อดูข้อมูลที่ถูกส่งไปยัง JavaScript ใน Console ของเบราว์เซอร์
+echo '<script>';
+echo 'console.log("--- DEBUG: Lesson Data for JavaScript ---");';
+echo 'console.log(' . json_encode($lessons_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ');';
+echo '</script>';
+// ---------------------
+
+?>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+    body{background:#f6f7fb}
+    .player-card{border:0;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    .playlist{border-radius:.75rem;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+    .playlist .active{background:#e7f1ff}
+    .cue{cursor:pointer}
+    .cue.active{background:#fff3cd}
+    .note-box{min-height:120px}
+    .kbd{border:1px solid #dee2e6;border-bottom-width:2px;border-right-width:2px;border-radius:.375rem;padding:.125rem .375rem;font-size:.8rem;background:#fff}
+    #questionModal .list-group-item-action:hover { background-color: #f8f9fa; }
+</style>
+
+<main class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="index.php?page=home">หน้าแรก</a></li>
+        <li class="breadcrumb-item"><a href="#modules">โมดูล</a></li>
+        <li id="bcLesson" class="breadcrumb-item active" aria-current="page">บทเรียนวิดีโอ</li>
+        </ol>
+    </nav>
+
+    <div class="row g-3">
+        <!-- LEFT: PLAYER -->
+        <div class="col-lg-8">
+        <div class="card player-card">
+            <div class="ratio ratio-16x9 bg-dark">
+            <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
+                <source id="srcMp4" src="" type="video/mp4" />
+              
+            </video>
+            </div>
+            <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <h1 id="lessonTitle" class="h5 flex-fill mb-0"></h1>
+                <div class="d-flex align-items-center gap-2">
+                <label class="text-muted small">ความเร็ว</label>
+                <select id="speed" class="form-select form-select-sm" style="width:auto">
+                    <option value="0.75">0.75×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.25">1.25×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+                </div>
+            </div>
+
+            <div class="progress" role="progressbar" aria-label="ความก้าวหน้า" aria-valuemin="0" aria-valuemax="100">
+                <div id="prog" class="progress-bar" style="width:0%">0%</div>
+            </div>
+
+            <div class="mt-3 d-flex flex-wrap gap-2">
+                <a id="btnSlide" href="#" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> สไลด์</a>
+                <a id="btnQuiz" href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-ui-checks-grid me-1"></i> ทำแบบทดสอบท้ายบท</a>
+                <button id="btnComplete" class="btn btn-success btn-sm ms-auto" disabled><i class="bi bi-check2-circle me-1"></i> ทำบทเรียนนี้แล้ว</button>
+            </div>
+            </div>
+        </div>
+
+        <!-- Transcript -->
+        <div class="card mt-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-subtitle me-1"></i> คำบรรยาย/สคริปต์</span>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoScroll" checked>
+                <label class="form-check-label small" for="autoScroll">เลื่อนอัตโนมัติ</label>
+            </div>
+            </div>
+            <div id="transcript" class="list-group list-group-flush" style="max-height:260px; overflow:auto"></div>
+        </div>
+        </div>
+
+        <!-- RIGHT: PLAYLIST -->
+        <div class="col-lg-4">
+        <div class="p-2 playlist">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-semibold"><i class="bi bi-collection-play me-1"></i> เพลย์ลิสต์บทเรียน</div>
+            <div class="small text-muted"><span id="completedCount">0</span>/<span id="totalCount">0</span> เสร็จแล้ว</div>
+            </div>
+            <div id="list" class="list-group small"></div>
+        </div>
+        </div>
+    </div>
+</main>
+
+<!-- Question Modal -->
+<div class="modal fade" id="questionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="questionModalLabel">คำถามระหว่างบทเรียน</h5>
+            </div>
+            <div class="modal-body">
+                <p id="questionText" class="lead"></p>
+                <div id="questionChoices" class="list-group"></div>
+                <div id="questionFeedback" class="mt-3 small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="continueBtn" class="btn btn-primary" style="display:none;">ดูวิดีโอต่อ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // --- Data (from PHP) ---
+    const lessons = <?= json_encode($lessons_data, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK); ?>;
+
+    // --- Elements ---
+    const player = document.getElementById('player');
+    const srcMp4 = document.getElementById('srcMp4');
+    const prog = document.getElementById('prog');
+    const speed = document.getElementById('speed');
+    const transcriptEl = document.getElementById('transcript');
+    const btnComplete = document.getElementById('btnComplete');
+    const bcLesson = document.getElementById('bcLesson');
+    const btnSlide = document.getElementById('btnSlide');
+    const btnQuiz = document.getElementById('btnQuiz');
+    const list = document.getElementById('list');
+    const completedCount = document.getElementById('completedCount');
+    const totalCount = document.getElementById('totalCount');
+
+    // --- Modal Elements ---
+    const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
+    const questionText = document.getElementById('questionText');
+    const questionChoices = document.getElementById('questionChoices');
+    const questionFeedback = document.getElementById('questionFeedback');
+    const continueBtn = document.getElementById('continueBtn');
+
+    let current = 0; // index
+    let questionTimeout; // ตัวแปรสำหรับจับเวลาตอนคำถามแสดง
+
+    function renderList(){
+        totalCount.textContent = lessons.length;
+        list.innerHTML = lessons.map((l,idx)=>{
+            const done = localStorage.getItem('done_'+l.id) === '1';
+            return `<button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${idx===current?'active':''}" onclick="loadLesson(${idx})">
+            <span class="text-start">${l.title}</span>
+            <span class="badge ${done?'text-bg-success':'text-bg-light'}">${done?'เสร็จแล้ว':'ยังไม่เรียน'}</span>
+            </button>`;
+        }).join('');
+        updateCompletedCounter();
+    }
+
+    function updateCompletedCounter(){
+        const count = lessons.filter(l=> localStorage.getItem('done_'+l.id)==='1').length;
+        completedCount.textContent = count;
+    }
+
+    function loadLesson(idx){
+        current = idx;
+        const l = lessons[idx];
+        document.getElementById('lessonTitle').textContent = l.title;
+        bcLesson.textContent = l.title;
+        btnSlide.href = l.slide; btnQuiz.href = l.quiz;
+
+        srcMp4.src = l.sources['720'] || Object.values(l.sources)[0];
+        player.poster = l.poster || '';
+        player.load();
+
+        transcriptEl.innerHTML = l.transcript.map(c=>`<a class="list-group-item list-group-item-action cue" data-t="${c.t}"><span class="text-muted me-2">${fmtTime(c.t)}</span>${c.text}</a>`).join('');
+        transcriptEl.querySelectorAll('.cue').forEach(el=>{
+            el.addEventListener('click', ()=>{ player.currentTime = parseFloat(el.dataset.t); player.play(); });
+        });
+
+        const done = localStorage.getItem('done_'+l.id) === '1';
+        btnComplete.disabled = done;
+        btnComplete.textContent = done ? 'เรียนจบแล้ว' : 'ทำบทเรียนนี้แล้ว';
+
+        // Reset shown status for questions of the new lesson
+        l.questions.forEach(q => q.shown = false);
+
+        renderList();
+    }
+
+    function showQuestion(question) {
+        player.pause();
+        question.shown = true;
+
+        questionText.textContent = question.question;
+        // ล้างตัวเลือกเก่าและ feedback
+        questionChoices.innerHTML = '';
+        questionFeedback.innerHTML = '';
+        for (const key in question.choices) {
+            const choice = question.choices[key];
+            const button = document.createElement('button');
+            button.className = 'list-group-item list-group-item-action';
+            button.textContent = `${key}. ${choice}`;
+            button.onclick = () => handleAnswer(key, question.correct);
+            questionChoices.appendChild(button);
+        }
+        continueBtn.style.display = 'none';
+        questionModal.show();
+
+        // ตั้งเวลา 15 วินาที ถ้าไม่ตอบจะรีเซ็ตวิดีโอ
+        clearTimeout(questionTimeout);
+        questionTimeout = setTimeout(() => {
+            questionModal.hide();
+            alert("คุณไม่ได้ตอบคำถามภายในเวลาที่กำหนด วิดีโอจะเริ่มเล่นใหม่");
+            player.currentTime = 0; // รีเซ็ตเวลาวิดีโอ
+            // player.pause() ถูกเรียกไปแล้วตอน showQuestion
+        }, 15000); // 15 วินาที
+    }
+
+    function handleAnswer(selected, correct) {
+        clearTimeout(questionTimeout); // ยกเลิกการจับเวลาเมื่อผู้ใช้ตอบ
+        // Disable all choices
+        const buttons = questionChoices.querySelectorAll('button');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selected === correct) {
+            questionFeedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>ถูกต้อง!</span>';
+            // TODO: Add score via AJAX if needed
+        } else {
+            questionFeedback.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correct}</span>`;
+        }
+        continueBtn.style.display = 'block';
+    }
+
+    continueBtn.addEventListener('click', () => {
+        questionModal.hide();
+        player.play();
+    });
+
+    // 4. จัดการเมื่อผู้ใช้สลับแท็บ
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            player.pause();
+            player.currentTime = 0; // รีเซ็ตวิดีโอเมื่อสลับแท็บ
+            // alert("คุณสลับไปยังหน้าต่างอื่น วิดีโอจะเริ่มเล่นใหม่"); // อาจจะน่ารำคาญไป เอาออกก่อน
+        }
+    });
+
+    speed.addEventListener('change', ()=>{ player.playbackRate = parseFloat(speed.value); });
+
+    player.addEventListener('timeupdate', ()=>{
+        if(!player.duration) return;
+        const p = Math.floor(player.currentTime * 100 / player.duration);
+        prog.style.width = p+"%"; prog.textContent = p+"%";
+
+        // Highlight transcript
+        const cues = Array.from(transcriptEl.querySelectorAll('.cue'));
+        let activeIdx = -1;
+        for(let i=0;i<cues.length;i++){
+            const t = parseFloat(cues[i].dataset.t);
+            const nextT = i<cues.length-1 ? parseFloat(cues[i+1].dataset.t) : 1e9;
+            if(player.currentTime>=t && player.currentTime<nextT){ activeIdx=i; break; }
+        }
+        cues.forEach((el,i)=> el.classList.toggle('active', i===activeIdx));
+        if(activeIdx>=0 && document.getElementById('autoScroll').checked){
+            cues[activeIdx].scrollIntoView({block:'nearest'});
+        }
+
+        // Check for questions
+        const lesson = lessons[current];
+        if (lesson && lesson.questions) {
+            for (const q of lesson.questions) {
+                if (!q.shown && player.currentTime >= q.timeshow) {
+                    showQuestion(q);
+                    break; // Show one question at a time
+                }
+            }
+        }
+    });
+
+    btnComplete.addEventListener('click', ()=>{
+        const l = lessons[current];
+        localStorage.setItem('done_'+l.id, '1');
+        btnComplete.disabled = true; btnComplete.textContent = 'เรียนจบแล้ว';
+        updateCompletedCounter(); renderList();
+    });
+
+    function fmtTime(s){ const m = Math.floor(s/60); const ss = Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
+
+    (function init(){
+        if (lessons.length > 0) {
+            // Check for a lesson id in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const lessonId = urlParams.get('chapter'); // FIX: Read 'chapter' from URL
+            let startIdx = 0;
+            if (lessonId) {
+                const foundIdx = lessons.findIndex(l => l.db_id == lessonId);
+                if (foundIdx !== -1) {
+                    startIdx = foundIdx;
+                }
+            }
+            renderList();
+            loadLesson(startIdx);
+        } else {
+            document.getElementById('lessonTitle').textContent = "[บทที่1]";
+            list.innerHTML = '<div class="list-group-item">กรุณาเพิ่มบทเรียนในหน้า Admin</div>';
+        }
+    })();
+</script>
