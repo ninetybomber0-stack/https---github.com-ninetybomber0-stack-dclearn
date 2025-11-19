@@ -25,8 +25,9 @@ if ($content_result) {
         while ($q = $questions_result->fetch_assoc()) {
             $questions[] = [
                 'id' => $q['id'], 'question' => $q['question'],
-                'choices' => ['A' => $q['option1'], 'B' => $q['option2'], 'C' => $q['option3'], 'D' => $q['option4']],
-                'correct' => $q['correct'], 'timeshow' => toSeconds($q['timeshow']), 'shown' => false
+                'choices' => ['A' => $q['choice_a'], 'B' => $q['choice_b'], 'C' => $q['choice_c'], 'D' => $q['choice_d']],
+                'correct' => $q['correct'], 
+                'timeshow' => toSeconds($q['timeshow']), 'shown' => false
             ];
         }
         $stmt_q->close();
