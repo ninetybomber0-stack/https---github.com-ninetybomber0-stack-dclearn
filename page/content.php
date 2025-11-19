@@ -262,9 +262,14 @@ echo '</script>';
         btnComplete.textContent = done ? 'เรียนจบแล้ว' : 'ทำบทเรียนนี้แล้ว';
 
         // Reset shown status for questions of the new lesson
-        l.questions.forEach(q => q.shown = false);
+        resetQuestionShown();
 
         renderList();
+    }
+
+    function resetQuestionShown(){
+        let lesson = lessons[current];
+        lesson.questions.forEach(q => q.shown = false);
     }
 
     function showQuestion(question) {
@@ -292,7 +297,7 @@ echo '</script>';
             questionModal.hide();
             alert("คุณไม่ได้ตอบคำถามภายในเวลาที่กำหนด วิดีโอจะเริ่มเล่นใหม่");
             player.currentTime = 0; // รีเซ็ตเวลาวิดีโอ
-            // player.pause() ถูกเรียกไปแล้วตอน showQuestion
+            resetQuestionShown();
         }, 15000); // 15 วินาที
     }
 
