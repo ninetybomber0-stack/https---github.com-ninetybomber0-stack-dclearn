@@ -246,7 +246,18 @@ echo '</script>';
         const l = lessons[idx];
         document.getElementById('lessonTitle').textContent = l.title;
         bcLesson.textContent = l.title;
-        btnSlide.href = l.slide; btnQuiz.href = l.quiz;
+        if (l.slide && l.slide !== '#' && l.slide.trim() !== '') {
+            btnSlide.href = l.slide;
+            btnSlide.target = '_blank';
+            btnSlide.classList.remove('disabled');
+            btnSlide.removeAttribute('aria-disabled');
+        } else {
+            btnSlide.href = '#';
+            btnSlide.removeAttribute('target');
+            btnSlide.classList.add('disabled');
+            btnSlide.setAttribute('aria-disabled', 'true');
+        }
+        btnQuiz.href = l.quiz;
 
         srcMp4.src = l.sources['720'] || Object.values(l.sources)[0];
         player.poster = l.poster || '';
