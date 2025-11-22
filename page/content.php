@@ -100,7 +100,39 @@ echo '</script>';
     .cue.active{background:#fff3cd}
     .note-box{min-height:120px}
     .kbd{border:1px solid #dee2e6;border-bottom-width:2px;border-right-width:2px;border-radius:.375rem;padding:.125rem .375rem;font-size:.8rem;background:#fff}
-    #questionModal .list-group-item-action:hover { background-color: #f8f9fa; }
+    
+    /* Question Overlay Styles */
+    #questionOverlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 20; /* Higher than controls */
+        display: none; /* Hidden by default */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        padding: 20px;
+        text-align: center;
+    }
+    #questionOverlay .list-group-item {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #questionOverlay .list-group-item:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    #questionOverlay .list-group-item:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 </style>
 
 <main class="container py-4">
@@ -116,10 +148,19 @@ echo '</script>';
         <!-- CENTER: PLAYER & CONTENT -->
         <div class="col-lg-10">
             <div class="card player-card mb-3">
-                <div class="ratio ratio-16x9 bg-dark">
-                <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
-                    <source id="srcMp4" src="" type="video/mp4" />
-                </video>
+                <div class="ratio ratio-16x9 bg-dark position-relative">
+                    <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
+                        <source id="srcMp4" src="" type="video/mp4" />
+                    </video>
+                    
+                    <!-- Question Overlay -->
+                    <div id="questionOverlay">
+                        <h4 class="mb-4">คำถามทบทวนความเข้าใจ</h4>
+                        <p id="questionText" class="lead mb-4"></p>
+                        <div id="questionChoices" class="list-group w-75 mb-3" style="max-width: 600px;"></div>
+                        <div id="questionFeedback" class="mb-3"></div>
+                        <button id="continueBtn" class="btn btn-primary px-4" style="display:none;">ดูวิดีโอต่อ</button>
+                    </div>
                 </div>
                 <div class="card-body">
                 <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
@@ -172,26 +213,6 @@ echo '</script>';
     </div>
 </main>
 
-<!-- Question Modal -->
-<div class="modal fade" id="questionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="questionModalLabel">คำถามระหว่างบทเรียน</h5>
-            </div>
-            <div class="modal-body">
-                <p id="questionText" class="lead"></p>
-                <div id="questionChoices" class="list-group"></div>
-                <div id="questionFeedback" class="mt-3 small"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="continueBtn" class="btn btn-primary" style="display:none;">ดูวิดีโอต่อ</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // --- Data (from PHP) ---
@@ -211,8 +232,8 @@ echo '</script>';
     const completedCount = document.getElementById('completedCount');
     const totalCount = document.getElementById('totalCount');
 
-    // --- Modal Elements ---
-    const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
+    // --- Overlay Elements ---
+    const questionOverlay = document.getElementById('questionOverlay');
     const questionText = document.getElementById('questionText');
     const questionChoices = document.getElementById('questionChoices');
     const questionFeedback = document.getElementById('questionFeedback');
@@ -271,6 +292,9 @@ echo '</script>';
 
         // Reset shown status for questions of the new lesson
         resetQuestionShown();
+        
+        // Hide overlay if showing
+        questionOverlay.style.display = 'none';
 
         renderList();
     }
@@ -291,18 +315,25 @@ echo '</script>';
         for (const key in question.choices) {
             const choice = question.choices[key];
             const button = document.createElement('button');
-            button.className = 'list-group-item list-group-item-action';
+            button.className = 'list-group-item list-group-item-action text-start';
             button.textContent = `${key}. ${choice}`;
             button.onclick = () => handleAnswer(key, question.correct);
             questionChoices.appendChild(button);
         }
         continueBtn.style.display = 'none';
-        questionModal.show();
+        
+        // Show Overlay
+        questionOverlay.style.display = 'flex';
+        
+        // Exit fullscreen if active, to ensure overlay is visible and usable
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(err => console.log(err));
+        }
 
         // ตั้งเวลา 15 วินาที ถ้าไม่ตอบจะรีเซ็ตวิดีโอ
         clearTimeout(questionTimeout);
         questionTimeout = setTimeout(() => {
-            questionModal.hide();
+            questionOverlay.style.display = 'none';
             alert("คุณไม่ได้ตอบคำถามภายในเวลาที่กำหนด วิดีโอจะเริ่มเล่นใหม่");
             player.currentTime = 0; // รีเซ็ตเวลาวิดีโอ
             resetQuestionShown();
@@ -316,16 +347,16 @@ echo '</script>';
         buttons.forEach(b => b.disabled = true);
 
         if (selected === correct) {
-            questionFeedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>ถูกต้อง!</span>';
+            questionFeedback.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>ถูกต้อง!</span>';
             // TODO: Add score via AJAX if needed
         } else {
-            questionFeedback.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correct}</span>`;
+            questionFeedback.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correct}</span>`;
         }
         continueBtn.style.display = 'block';
     }
 
     continueBtn.addEventListener('click', () => {
-        questionModal.hide();
+        questionOverlay.style.display = 'none';
         player.play();
     });
 
@@ -333,8 +364,7 @@ echo '</script>';
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             player.pause();
-            player.currentTime = 0; // รีเซ็ตวิดีโอเมื่อสลับแท็บ
-            // alert("คุณสลับไปยังหน้าต่างอื่น วิดีโอจะเริ่มเล่นใหม่"); // อาจจะน่ารำคาญไป เอาออกก่อน
+            // player.currentTime = 0; // รีเซ็ตวิดีโอเมื่อสลับแท็บ (Optional)
         }
     });
 
