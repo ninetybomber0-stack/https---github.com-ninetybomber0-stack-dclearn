@@ -112,65 +112,62 @@ echo '</script>';
         </ol>
     </nav>
 
-    <div class="row g-3">
-        <!-- LEFT: PLAYER -->
-        <div class="col-lg-8">
-        <div class="card player-card">
-            <div class="ratio ratio-16x9 bg-dark">
-            <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
-                <source id="srcMp4" src="" type="video/mp4" />
-              
-            </video>
-            </div>
-            <div class="card-body">
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <h1 id="lessonTitle" class="h5 flex-fill mb-0"></h1>
-                <div class="d-flex align-items-center gap-2">
-                <label class="text-muted small">ความเร็ว</label>
-                <select id="speed" class="form-select form-select-sm" style="width:auto">
-                    <option value="0.75">0.75×</option>
-                    <option value="1" selected>1×</option>
-                    <option value="1.25">1.25×</option>
-                    <option value="1.5">1.5×</option>
-                    <option value="2">2×</option>
-                </select>
+    <div class="row g-3 justify-content-center">
+        <!-- CENTER: PLAYER & CONTENT -->
+        <div class="col-lg-10">
+            <div class="card player-card mb-3">
+                <div class="ratio ratio-16x9 bg-dark">
+                <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
+                    <source id="srcMp4" src="" type="video/mp4" />
+                </video>
+                </div>
+                <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <h1 id="lessonTitle" class="h5 flex-fill mb-0"></h1>
+                    <div class="d-flex align-items-center gap-2">
+                    <label class="text-muted small">ความเร็ว</label>
+                    <select id="speed" class="form-select form-select-sm" style="width:auto">
+                        <option value="0.75">0.75×</option>
+                        <option value="1" selected>1×</option>
+                        <option value="1.25">1.25×</option>
+                        <option value="1.5">1.5×</option>
+                        <option value="2">2×</option>
+                    </select>
+                    </div>
+                </div>
+
+                <div class="progress" role="progressbar" aria-label="ความก้าวหน้า" aria-valuemin="0" aria-valuemax="100">
+                    <div id="prog" class="progress-bar" style="width:0%">0%</div>
+                </div>
+
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <a id="btnSlide" href="#" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> สไลด์</a>
+                    <a id="btnQuiz" href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-ui-checks-grid me-1"></i> ทำแบบทดสอบท้ายบท</a>
+                    <button id="btnComplete" class="btn btn-success btn-sm ms-auto" disabled><i class="bi bi-check2-circle me-1"></i> ทำบทเรียนนี้แล้ว</button>
+                </div>
                 </div>
             </div>
 
-            <div class="progress" role="progressbar" aria-label="ความก้าวหน้า" aria-valuemin="0" aria-valuemax="100">
-                <div id="prog" class="progress-bar" style="width:0%">0%</div>
+            <!-- Transcript -->
+            <div class="card mb-3">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-subtitle me-1"></i> คำบรรยาย/สคริปต์</span>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="autoScroll" checked>
+                    <label class="form-check-label small" for="autoScroll">เลื่อนอัตโนมัติ</label>
+                </div>
+                </div>
+                <div id="transcript" class="list-group list-group-flush" style="max-height:260px; overflow:auto"></div>
             </div>
 
-            <div class="mt-3 d-flex flex-wrap gap-2">
-                <a id="btnSlide" href="#" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> สไลด์</a>
-                <a id="btnQuiz" href="#" class="btn btn-outline-primary btn-sm"><i class="bi bi-ui-checks-grid me-1"></i> ทำแบบทดสอบท้ายบท</a>
-                <button id="btnComplete" class="btn btn-success btn-sm ms-auto" disabled><i class="bi bi-check2-circle me-1"></i> ทำบทเรียนนี้แล้ว</button>
+            <!-- PLAYLIST (Moved to bottom) -->
+            <div class="p-2 playlist">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-semibold"><i class="bi bi-collection-play me-1"></i> เพลย์ลิสต์บทเรียน</div>
+                <div class="small text-muted"><span id="completedCount">0</span>/<span id="totalCount">0</span> เสร็จแล้ว</div>
+                </div>
+                <div id="list" class="list-group small"></div>
             </div>
-            </div>
-        </div>
-
-        <!-- Transcript -->
-        <div class="card mt-3">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-subtitle me-1"></i> คำบรรยาย/สคริปต์</span>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="autoScroll" checked>
-                <label class="form-check-label small" for="autoScroll">เลื่อนอัตโนมัติ</label>
-            </div>
-            </div>
-            <div id="transcript" class="list-group list-group-flush" style="max-height:260px; overflow:auto"></div>
-        </div>
-        </div>
-
-        <!-- RIGHT: PLAYLIST -->
-        <div class="col-lg-4">
-        <div class="p-2 playlist">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="fw-semibold"><i class="bi bi-collection-play me-1"></i> เพลย์ลิสต์บทเรียน</div>
-            <div class="small text-muted"><span id="completedCount">0</span>/<span id="totalCount">0</span> เสร็จแล้ว</div>
-            </div>
-            <div id="list" class="list-group small"></div>
-        </div>
         </div>
     </div>
 </main>
