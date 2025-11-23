@@ -59,9 +59,12 @@ if ($content_result) {
             'slide' => $lesson['slide_url'] ?? '#',
             'quiz' => $lesson['quiz_url'] ?? '#',
             'sources' => [
-                // FIX: Use 'video_file' column which exists in tb_content
-                '720' => '/videos/' . ltrim($lesson['copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4'] ?? '', '/'),
-                '480' => '/videos/' . ltrim($lesson['copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4'] ?? '', '/') 
+                '720' => (strpos($lesson['video_path_720p'] ?? '', 'http') === 0) 
+                    ? $lesson['video_path_720p'] 
+                    : '/videos/' . ltrim($lesson['video_path_720p'] ?? '', '/'),
+                '480' => (strpos($lesson['video_path_480p'] ?? '', 'http') === 0) 
+                    ? $lesson['video_path_480p'] 
+                    : '/videos/' . ltrim($lesson['video_path_480p'] ?? '', '/')
             ],
             'poster' => $lesson['poster_path'] ?? '',
             'transcript' => $transcript,
@@ -70,18 +73,7 @@ if ($content_result) {
     }
 }
 
-// --- บังคับให้บทที่ 1 ใช้วิดีโอที่กำหนด ---
-foreach ($lessons_data as $index => $lesson) {
-    if ($lesson['db_id'] == 1) { // ตรวจสอบว่าเป็นบทที่ 1 หรือไม่
-        // กำหนดไฟล์วิดีโอสำหรับบทที่ 1 โดยเฉพาะ
-        $lessons_data[$index]['sources']['720'] = '/videos/copy_73602C8E-308E-4B41-A22A-F416B0E38193.mp4';
-        break; // หยุด loop เมื่อเจอและแก้ไขแล้ว
-    }
-}
-// -----------------------------------------
-
 // --- DEBUG LOGGING ---
-// เพิ่มโค้ดนี้เพื่อดูข้อมูลที่ถูกส่งไปยัง JavaScript ใน Console ของเบราว์เซอร์
 echo '<script>';
 echo 'console.log("--- DEBUG: Lesson Data for JavaScript ---");';
 echo 'console.log(' . json_encode($lessons_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ');';
