@@ -22,6 +22,39 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
 
     // We assume $mysqli is available from index.php
     
+    // --- Handle Score Submission (Pre/Post Test) ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_exam_score'])) {
+        $student_id = $_POST['student_id'];
+        $exam_type = $_POST['exam_type'];
+        $score = (int)$_POST['score'];
+        $full_score = (int)$_POST['full_score'];
+        
+        // Check if record exists
+        $check_sql = "SELECT id FROM tb_exam_scores WHERE student_id = ? AND exam_type = ?";
+        $stmt = $mysqli->prepare($check_sql);
+        $stmt->bind_param("ss", $student_id, $exam_type);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            // Update
+            $update_sql = "UPDATE tb_exam_scores SET score = ?, full_score = ? WHERE student_id = ? AND exam_type = ?";
+            $stmt = $mysqli->prepare($update_sql);
+            $stmt->bind_param("iiss", $score, $full_score, $student_id, $exam_type);
+            $stmt->execute();
+        } else {
+            // Insert
+            $insert_sql = "INSERT INTO tb_exam_scores (student_id, exam_type, score, full_score) VALUES (?, ?, ?, ?)";
+            $stmt = $mysqli->prepare($insert_sql);
+            $stmt->bind_param("ssii", $student_id, $exam_type, $score, $full_score);
+            $stmt->execute();
+        }
+        
+        // Redirect to avoid resubmission
+        echo "<script>window.location.href = 'index.php?p=user_list';</script>";
+        exit;
+    }
+
     // --- Data Fetching for Teacher's View ---
     $students = [];
     $lessons = [];
@@ -29,6 +62,7 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
     $scores_data = [];
     $submissions_data = [];
     $total_points = [];
+    $exam_scores = []; // New array for exam scores
 
     // 1. Get all students (non-admin)
     $student_result = $mysqli->query("SELECT id, id_std, fullname, class FROM tb_member WHERE id_std != 'kamol' ORDER BY class, fullname ASC");
@@ -80,6 +114,14 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
         while ($row = $submission_result->fetch_assoc()) {
             // Store the latest submission for each work
             $submissions_data[$row['student_id']][$row['work_id']] = $row;
+        }
+    }
+
+    // 7. Get Pre/Post Test Scores
+    $exam_result = $mysqli->query("SELECT student_id, exam_type, score, full_score FROM tb_exam_scores");
+    if ($exam_result) {
+        while ($row = $exam_result->fetch_assoc()) {
+            $exam_scores[$row['student_id']][$row['exam_type']] = $row;
         }
     }
 ?>
@@ -186,6 +228,119 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                     </tr>
                                                                 <?php endforeach; ?>
                                                             <?php endif; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            </div>
+                                            
+                                            <!-- Exam Scores (Pre/Post) -->
+                                            <div class="col-12 mt-3">
+                                                <h6><i class="bi bi-journal-text me-1"></i>คะแนนสอบ (Pre-test / Post-test)</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>การสอบ</th>
+                                                                <th class="text-center" style="width: 150px;">คะแนนที่ได้</th>
+                                                                <th class="text-center" style="width: 150px;">คะแนนเต็ม</th>
+                                                                <th class="text-center" style="width: 100px;">จัดการ</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <!-- Pre-test -->
+                                                            <tr>
+                                                                <td>สอบก่อนเรียน (Pre-test)</td>
+                                                                <td class="text-center">
+                                                                    <?php 
+                                                                    $pre_score = isset($exam_scores[$student_std_id]['pre_test']) ? $exam_scores[$student_std_id]['pre_test']['score'] : '-';
+                                                                    echo $pre_score;
+                                                                    ?>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <?php 
+                                                                    $pre_full = isset($exam_scores[$student_std_id]['pre_test']) ? $exam_scores[$student_std_id]['pre_test']['full_score'] : '100';
+                                                                    echo $pre_full;
+                                                                    ?>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-pre-<?= $student['id'] ?>">
+                                                                        <i class="bi bi-pencil"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                            <!-- Edit Form Pre-test -->
+                                                            <tr class="collapse" id="edit-pre-<?= $student['id'] ?>">
+                                                                <td colspan="4" class="bg-light">
+                                                                    <form method="POST" class="row g-2 align-items-center justify-content-end">
+                                                                        <input type="hidden" name="save_exam_score" value="1">
+                                                                        <input type="hidden" name="student_id" value="<?= $student_std_id ?>">
+                                                                        <input type="hidden" name="exam_type" value="pre_test">
+                                                                        <div class="col-auto">
+                                                                            <label class="col-form-label btn-sm">คะแนน:</label>
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <input type="number" name="score" class="form-control form-control-sm" value="<?= $pre_score !== '-' ? $pre_score : '' ?>" required style="width: 80px;">
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <label class="col-form-label btn-sm">เต็ม:</label>
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <input type="number" name="full_score" class="form-control form-control-sm" value="<?= $pre_full ?>" required style="width: 80px;">
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <button type="submit" class="btn btn-sm btn-success">บันทึก</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+
+                                                            <!-- Post-test -->
+                                                            <tr>
+                                                                <td>สอบหลังเรียน (Post-test)</td>
+                                                                <td class="text-center">
+                                                                    <?php 
+                                                                    $post_score = isset($exam_scores[$student_std_id]['post_test']) ? $exam_scores[$student_std_id]['post_test']['score'] : '-';
+                                                                    echo $post_score;
+                                                                    ?>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <?php 
+                                                                    $post_full = isset($exam_scores[$student_std_id]['post_test']) ? $exam_scores[$student_std_id]['post_test']['full_score'] : '100';
+                                                                    echo $post_full;
+                                                                    ?>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-post-<?= $student['id'] ?>">
+                                                                        <i class="bi bi-pencil"></i>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                            <!-- Edit Form Post-test -->
+                                                            <tr class="collapse" id="edit-post-<?= $student['id'] ?>">
+                                                                <td colspan="4" class="bg-light">
+                                                                    <form method="POST" class="row g-2 align-items-center justify-content-end">
+                                                                        <input type="hidden" name="save_exam_score" value="1">
+                                                                        <input type="hidden" name="student_id" value="<?= $student_std_id ?>">
+                                                                        <input type="hidden" name="exam_type" value="post_test">
+                                                                        <div class="col-auto">
+                                                                            <label class="col-form-label btn-sm">คะแนน:</label>
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <input type="number" name="score" class="form-control form-control-sm" value="<?= $post_score !== '-' ? $post_score : '' ?>" required style="width: 80px;">
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <label class="col-form-label btn-sm">เต็ม:</label>
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <input type="number" name="full_score" class="form-control form-control-sm" value="<?= $post_full ?>" required style="width: 80px;">
+                                                                        </div>
+                                                                        <div class="col-auto">
+                                                                            <button type="submit" class="btn btn-sm btn-success">บันทึก</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
                                                         </tbody>
                                                     </table>
                                                 </div>

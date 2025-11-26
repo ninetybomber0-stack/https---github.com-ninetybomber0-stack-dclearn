@@ -9,6 +9,20 @@ function is_new($timestamp, $days = 7) {
 }
 ?>
 
+<!-- COURSE DESCRIPTION -->
+<section class="mb-4">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h4 class="card-title fw-bold text-primary mb-3"><i class="bi bi-book-half me-2"></i>คำอธิบายรายวิชา</h4>
+      <div class="fs-5">
+        <p class="mb-2"><strong>ชื่อหลักสูตร (ภาษาไทย):</strong> หลักสูตรบริหารธุรกิจบัณฑิต สาขาวิชาเทคโนโลยีธุรกิจดิจิทัล (ต่อเนื่อง)</p>
+        <p class="mb-2"><strong>ชื่อหลักสูตร (ภาษาอังกฤษ):</strong> Bachelor of Business Administration Program in Digital Business Technology (Continuing Program)</p>
+        <p class="mb-0"><strong>รหัสหลักสูตร:</strong> 25481991103817</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ANNOUNCEMENTS & LIVE -->
 <div class="row g-3">
   <!-- ซ้าย: ประกาศ -->
