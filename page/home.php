@@ -18,6 +18,42 @@ function is_new($timestamp, $days = 7) {
         <p class="mb-2"><strong>ชื่อหลักสูตร (ภาษาไทย):</strong> หลักสูตรบริหารธุรกิจบัณฑิต สาขาวิชาเทคโนโลยีธุรกิจดิจิทัล (ต่อเนื่อง)</p>
         <p class="mb-2"><strong>ชื่อหลักสูตร (ภาษาอังกฤษ):</strong> Bachelor of Business Administration Program in Digital Business Technology (Continuing Program)</p>
         <p class="mb-0"><strong>รหัสหลักสูตร:</strong> 25481991103817</p>
+        
+        <div class="text-start mt-2">
+          <a class="text-decoration-none fw-bold" data-bs-toggle="collapse" href="#courseDetailCollapse" role="button" aria-expanded="false" aria-controls="courseDetailCollapse" onclick="toggleArrow(this)">
+            <i class="bi bi-chevron-down" id="courseArrow"></i> <span id="courseToggleText">ดูรายละเอียดเพิ่มเติม</span>
+          </a>
+        </div>
+
+        <div class="collapse" id="courseDetailCollapse">
+          <hr class="my-3">
+          <p class="mb-2"><strong>รหัสวิชา:</strong> 50-406-081-302</p>
+          <p class="mb-2"><strong>ชื่อวิชา:</strong> การสื่อสารข้อมูลและเครือข่ายคอมพิวเตอร์ (Data Communications and Computer Networks)</p>
+          <p class="mb-2"><strong>หน่วยกิต:</strong> 3(2-2-5)</p>
+          <p class="mb-2"><strong>คำอธิบายรายวิชา:</strong> หลักการสื่อสารข้อมูลทางคอมพิวเตอร์ สถาปัตยกรรมการสื่อสารข้อมูล แบบจำลองโอเอสไอ แบบจำลองอินเทอร์เน็ต เครือข่ายคอมพิวเตอร์ท้องถิ่น <br><small class="text-muted">(Principles of computer data communication; communication architecture; OSI model; internet model; local area networks)</small></p>
+          <p class="mb-2"><strong>ผลลัพธ์การเรียนรู้ของรายวิชา (CLOs):</strong></p>
+          <ul class="list-unstyled mb-0 ps-3">
+            <li>CLO1 : เข้าใจเรื่องความซื่อสัตย์ สุจริต และการมีจรรยาบรรณในวิชาชีพ</li>
+            <li>CLO2 : เข้าใจเรื่องการมีความรับผิดชอบและความตรงต่อเวลา</li>
+            <li>CLO3 : อธิบายหลักการการการสื่อสารข้อมูลและเครือข่ายคอมพิวเตอร์ได้</li>
+          </ul>
+        </div>
+
+        <script>
+        function toggleArrow(element) {
+          const arrow = document.getElementById('courseArrow');
+          const text = document.getElementById('courseToggleText');
+          if (arrow.classList.contains('bi-chevron-down')) {
+            arrow.classList.remove('bi-chevron-down');
+            arrow.classList.add('bi-chevron-up');
+            text.innerText = "ซ่อนรายละเอียด";
+          } else {
+            arrow.classList.remove('bi-chevron-up');
+            arrow.classList.add('bi-chevron-down');
+            text.innerText = "ดูรายละเอียดเพิ่มเติม";
+          }
+        }
+        </script>
       </div>
     </div>
   </div>

@@ -28,3 +28,10 @@ I have implemented the feature to display and manage Pre-test and Post-test scor
 
 ## Screenshots
 *(No screenshots available as I am running in a headless environment, but the code has been verified)*
+
+## Update: Course Description (2025-11-27)
+- Updated `task.md` with detailed course information.
+- Updated `page/home.php` to display the full course description.
+- **UI Improvement**: Implemented a "Show More / Show Less" toggle button to keep the interface clean.
+  - Initially shows only the Course Name and Code.
+  - Clicking the arrow expands to show Subject Code, Credits, Description, and CLOs.
