@@ -81,8 +81,6 @@ echo '</script>';
 // ---------------------
 
 ?>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <style>
     body{background:#f6f7fb}
     .player-card{border:0;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.06)}
@@ -205,7 +203,7 @@ echo '</script>';
     </div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     // --- Data (from PHP) ---
     const lessons = <?= json_encode($lessons_data, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK); ?>;

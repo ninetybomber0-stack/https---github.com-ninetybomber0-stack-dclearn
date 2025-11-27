@@ -35,3 +35,8 @@ I have implemented the feature to display and manage Pre-test and Post-test scor
 - **UI Improvement**: Implemented a "Show More / Show Less" toggle button to keep the interface clean.
   - Initially shows only the Course Name and Code.
   - Clicking the arrow expands to show Subject Code, Credits, Description, and CLOs.
+
+## Update: Fix Lesson Navigation (2025-11-27)
+- Fixed an issue where the "Learning Unit" dropdown and other Bootstrap components were not working on the content page.
+- **Cause**: Duplicate inclusion of Bootstrap CSS and JS libraries in `page/content.php` (already included in `index.php`).
+- **Fix**: Removed the redundant Bootstrap includes from `page/content.php`.
