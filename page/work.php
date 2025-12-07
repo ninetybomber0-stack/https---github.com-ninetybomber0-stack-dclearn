@@ -35,7 +35,7 @@
                       <textarea class="form-control" id="workDescription" name="work_description" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                      <label for="workFile" class="form-label">แนบไฟล์ (ถ้ามี)</label>
+                      <label for="workFile" class="form-label">แนบไฟล์ (PDF File) (ถ้ามี)</label>
                       <input class="form-control" type="file" id="workFile" name="work_file">
                     </div>
                     <div class="mb-3">
