@@ -57,34 +57,40 @@
         
         <!-- Example of an assignment item -->
         <div class="list-group">
-          <div class="list-group-item">
-            <div class="d-flex w-100 justify-content-between">
-              <h6 class="mb-1">แบบฝึกหัดท้ายบทที่ 1</h6>
-              <small class="text-muted">ส่งภายใน: 30 พ.ย. 2568</small>
-            </div>
-            <p class="mb-1">ให้นักศึกษาทำแบบฝึกหัดท้ายบทที่ 1 และส่งในรูปแบบไฟล์ PDF</p>
-            
-            <?php if (isset($_SESSION['sess_username']) && $_SESSION['sess_username'] === 'kamol'): ?>
-            <div class="mt-2">
-                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> แก้ไข</button>
-                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> ลบ</button>
-            </div>
-            <?php else: ?>
-            <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#submitWorkModal" data-work-title="แบบฝึกหัดท้ายบทที่ 1">
-                    <i class="bi bi-upload"></i> ส่งงาน
-                </button>
-            </div>
-            <?php endif; ?>
-          </div>
-          
+          <?php
+          $sql_works = "SELECT * FROM tb_work ORDER BY created_at DESC";
+          $result_works = $mysqli->query($sql_works);
+
+          if ($result_works && $result_works->num_rows > 0) {
+              while ($row = $result_works->fetch_assoc()) {
+                  $title = htmlspecialchars($row['title']);
+                  $desc = nl2br(htmlspecialchars($row['description']));
+                  $due = $row['due_date'] ? date('d/m/Y', strtotime($row['due_date'])) : '-';
+                  $file_path = $row['file_path'];
+          ?>
            <div class="list-group-item">
             <div class="d-flex w-100 justify-content-between">
-              <h6 class="mb-1">รายงานกลุ่ม: สถาปัตยกรรมเครือข่าย</h6>
-              <small class="text-muted">ส่งภายใน: 15 ธ.ค. 2568</small>
+              <h6 class="mb-1"><?php echo $title; ?></h6>
+              <small class="text-muted">ส่งภายใน: <?php echo $due; ?></small>
             </div>
-            <p class="mb-1">จัดกลุ่ม 3-4 คน จัดทำรายงานเกี่ยวกับสถาปัตยกรรมเครือข่ายคอมพิวเตอร์ 5 ประเภท พร้อมยกตัวอย่าง</p>
+            <p class="mb-1"><?php echo $desc; ?></p>
             
+            <?php 
+            if (!empty($file_path)) {
+                $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+                if (in_array($ext, ['mp4', 'webm', 'ogg'])) {
+                    echo '<div class="mt-3 mb-3 border rounded overflow-hidden bg-black">';
+                    echo '<video controls class="w-100" style="max-height:400px; display:block;">';
+                    echo '<source src="' . $file_path . '" type="video/' . $ext . '">';
+                    echo 'Browser ไม่รองรับการเล่นวิดีโอ';
+                    echo '</video>';
+                    echo '</div>';
+                } else {
+                     echo '<div class="mt-2 text-primary"><i class="bi bi-paperclip"></i> <a href="'.$file_path.'" target="_blank" class="text-decoration-none">ดาวน์โหลดไฟล์แนบ</a></div>';
+                }
+            } 
+            ?>
+
             <?php if (isset($_SESSION['sess_username']) && $_SESSION['sess_username'] === 'kamol'): ?>
             <div class="mt-2">
                 <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil-square"></i> แก้ไข</button>
@@ -92,12 +98,18 @@
             </div>
             <?php else: ?>
             <div class="mt-2">
-                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#submitWorkModal" data-work-title="รายงานกลุ่ม: สถาปัตยกรรมเครือข่าย">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#submitWorkModal" data-work-title="<?php echo $title; ?>">
                     <i class="bi bi-upload"></i> ส่งงาน
                 </button>
             </div>
             <?php endif; ?>
           </div>
+          <?php
+              }
+          } else {
+              echo '<div class="list-group-item text-center text-muted p-4">ไม่พบงานที่มอบหมาย</div>';
+          }
+          ?>
         </div>
 
       </div>
