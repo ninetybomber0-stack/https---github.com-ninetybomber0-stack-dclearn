@@ -209,6 +209,21 @@ echo '</script>';
     </div>
 </main>
 
+<!-- Quiz Modal -->
+<div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="height: 90vh;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="quizModalLabel"><i class="bi bi-ui-checks-grid me-2"></i>แบบทดสอบท้ายบท</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe id="quizFrame" src="" style="width: 100%; height: 100%; border: 0;"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
     // --- Data (from PHP) ---
@@ -401,6 +416,29 @@ echo '</script>';
         localStorage.setItem('done_'+l.id, '1');
         btnComplete.disabled = true; btnComplete.textContent = 'เรียนจบแล้ว';
         updateCompletedCounter(); renderList();
+    });
+
+
+    // --- Quiz Modal Logic ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const quizModal = new bootstrap.Modal(document.getElementById('quizModal'));
+        const quizFrame = document.getElementById('quizFrame');
+
+        btnQuiz.addEventListener('click', (e) => {
+            e.preventDefault();
+            const l = lessons[current];
+            if(l.quiz && l.quiz !== '#'){
+                 quizFrame.src = l.quiz;
+                 quizModal.show();
+            } else {
+                alert('ไม่มีแบบทดสอบสำหรับบทเรียนนี้');
+            }
+        });
+        
+        // Clear iframe when modal is closed to stop audio/video if any
+        document.getElementById('quizModal').addEventListener('hidden.bs.modal', () => {
+            quizFrame.src = '';
+        });
     });
 
     function fmtTime(s){ const m = Math.floor(s/60); const ss = Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
