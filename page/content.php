@@ -142,8 +142,6 @@ echo '</script>';
                     <video id="player" playsinline controls preload="metadata" poster="" class="w-100 h-100">
                         <source id="srcMp4" src="" type="video/mp4" />
                     </video>
-                    <!-- Iframe for external links -->
-                    <iframe id="extPlayer" class="w-100 h-100" src="" allowfullscreen style="display:none; border:0;"></iframe>
                     
                     <!-- Question Overlay -->
                     <div id="questionOverlay">
@@ -212,7 +210,6 @@ echo '</script>';
 
     // --- Elements ---
     const player = document.getElementById('player');
-    const extPlayer = document.getElementById('extPlayer'); // Iframe
     const srcMp4 = document.getElementById('srcMp4');
     const prog = document.getElementById('prog');
     const speed = document.getElementById('speed');
@@ -270,36 +267,13 @@ echo '</script>';
         }
         btnQuiz.href = l.quiz;
 
-        const videoUrl = l.sources['720'] || Object.values(l.sources)[0];
-        
-        // Detect if it's a direct video file or external link
-        const isVideoFile = videoUrl.match(/\.(mp4|webm|ogg)$/i);
-        // Also check if it's NOT an external link (relative path is assumed to be file)
-        const isExternal = videoUrl.startsWith('http');
-
-        if (isExternal && !isVideoFile) {
-            // Use Iframe
-            player.style.display = 'none';
-            player.pause();
-            extPlayer.style.display = 'block';
-            extPlayer.src = videoUrl;
-        } else {
-            // Use Video Tag
-            extPlayer.style.display = 'none';
-            extPlayer.src = '';
-            player.style.display = 'block';
-            srcMp4.src = videoUrl;
-            player.poster = l.poster || '';
-            player.load();
-        }
+        srcMp4.src = l.sources['720'] || Object.values(l.sources)[0];
+        player.poster = l.poster || '';
+        player.load();
 
         transcriptEl.innerHTML = l.transcript.map(c=>`<a class="list-group-item list-group-item-action cue" data-t="${c.t}"><span class="text-muted me-2">${fmtTime(c.t)}</span>${c.text}</a>`).join('');
         transcriptEl.querySelectorAll('.cue').forEach(el=>{
-            el.addEventListener('click', ()=>{ 
-                if(player.style.display !== 'none'){
-                    player.currentTime = parseFloat(el.dataset.t); player.play(); 
-                }
-            });
+            el.addEventListener('click', ()=>{ player.currentTime = parseFloat(el.dataset.t); player.play(); });
         });
 
         const done = localStorage.getItem('done_'+l.id) === '1';
