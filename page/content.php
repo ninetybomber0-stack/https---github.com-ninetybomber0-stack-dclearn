@@ -9,6 +9,16 @@ function toSeconds(string $timeStr): int {
     return count($parts) === 2 ? ((int)$parts[0] * 60) + (int)$parts[1] : 0;
 }
 
+function resolveVideoPath($path) {
+    $filename = basename($path ?? '');
+    // Check if file exists in local videos directory (relative to page/content.php)
+    if ($filename && file_exists(__DIR__ . '/../videos/' . $filename)) {
+        return 'videos/' . $filename;
+    }
+    $path = $path ?? '';
+    return (strpos($path, 'http') === 0) ? $path : '/videos/' . ltrim($path, '/');
+}
+
 $lessons_data = [];
 $content_result = $mysqli->query("SELECT * FROM tb_content ORDER BY lesson_order ASC, id ASC");
 
@@ -59,12 +69,8 @@ if ($content_result) {
             'slide' => $lesson['slide_url'] ?? '#',
             'quiz' => $lesson['quiz_url'] ?? '#',
             'sources' => [
-                '720' => (strpos($lesson['video_path_720p'] ?? '', 'http') === 0) 
-                    ? $lesson['video_path_720p'] 
-                    : '/videos/' . ltrim($lesson['video_path_720p'] ?? '', '/'),
-                '480' => (strpos($lesson['video_path_480p'] ?? '', 'http') === 0) 
-                    ? $lesson['video_path_480p'] 
-                    : '/videos/' . ltrim($lesson['video_path_480p'] ?? '', '/')
+                '720' => resolveVideoPath($lesson['video_path_720p']),
+                '480' => resolveVideoPath($lesson['video_path_480p'])
             ],
             'poster' => $lesson['poster_path'] ?? '',
             'transcript' => $transcript,
