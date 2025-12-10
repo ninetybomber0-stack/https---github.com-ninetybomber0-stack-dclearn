@@ -68,7 +68,7 @@ erDiagram
 
     tb_scores {
         int id PK
-        varchar student_id
+        int member_id
         int lesson_id
         int score
         int total
@@ -130,7 +130,7 @@ Stores subtitles or transcripts for the video lessons.
 ### 6. `tb_scores`
 Stores the aggregate score for a student on a specific lesson.
 - **Primary Key**: `id`
-- **Columns**: `student_id` (likely `tb_member.std_id`), `lesson_id`, `score`, and `total` possible score.
+- **Columns**: `member_id` (links to `tb_member.id`), `lesson_id`, `score`, and `total` possible score.
 
 ### 7. `user_lesson_status`
 Tracks whether a user has completed the pre-test and post-test for a lesson.

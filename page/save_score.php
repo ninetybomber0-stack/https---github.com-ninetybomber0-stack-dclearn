@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $member_id = $_SESSION['sess_userid'] ?? null; // ใช้ User ID (PK) จาก session
 $lesson_id  = $_POST['lesson_id'] ?? null;      // lesson_id ยังคงรับจาก form ได้
 $score      = isset($_POST['score']) ? (int)$_POST['score'] : 0;
+// รับค่า test_type เพิ่มเติม (ถ้ามี) ค่าเริ่มต้นให้เป็น QUIZ หรือ NULL ตามต้องการ
+$test_type  = $_POST['test_type'] ?? 'QUIZ'; 
 
 if (empty($member_id) || empty($lesson_id)) {
   http_response_code(400);
@@ -44,14 +46,14 @@ if (empty($member_id) || empty($lesson_id)) {
 list($current_db) = $mysqli->query("SELECT DATABASE()")->fetch_row();
 
 // ใช้ prepared statement
-$sql = "INSERT INTO tb_scores (member_id, lesson_id, score) VALUES (?, ?, ?)";
+$sql = "INSERT INTO tb_scores (member_id, lesson_id, score, test_type) VALUES (?, ?, ?, ?)";
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) {
   http_response_code(500);
   exit("DB prepare error: " . $mysqli->error . " | DB=" . $current_db);
 }
 
-if (!$stmt->bind_param('isi', $member_id, $lesson_id, $score)) {
+if (!$stmt->bind_param('isis', $member_id, $lesson_id, $score, $test_type)) {
   http_response_code(500);
   exit("bind_param error: " . $stmt->error);
 }

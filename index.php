@@ -208,6 +208,8 @@ if($page=="work"){
     include "page/manage_quizzes.php";
 }elseif($page=="changepw"){
     include "page/change_password.php";
+}elseif($page=="pretest"){
+    include "page/pretest.php";
 }else{
     include "page/home.php";
 }

@@ -24,6 +24,8 @@ if (isset($_SESSION['sess_username'])) {
 include "module/member/chksession.php";
 
 $page = $_GET['page'] ?? 'home'; // กำหนดค่า page (ถ้าไม่มีให้เป็น 'home')
+file_put_contents('debug_log.txt', date('Y-m-d H:i:s') . " - Page requested: " . $page . "\n", FILE_APPEND);
+
 
 //echo "XXXXXX".$id_std;
 //echo $sql;
@@ -220,6 +222,8 @@ if($page=="plane"){
     include "page/manage_quizzes.php";
 }elseif($page=="changepw"){
     include "page/change_password.php";
+}elseif($page=="pretest"){
+    include "page/pretest.php";
 }else{
     include "page/home.php";
 }
