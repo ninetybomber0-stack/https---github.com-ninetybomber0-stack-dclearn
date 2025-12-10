@@ -22,6 +22,7 @@ function resolveVideoPath($path) {
 $lessons_data = [];
 $content_result = $mysqli->query("SELECT * FROM tb_content ORDER BY lesson_order ASC, id ASC");
 
+
 if ($content_result) {
     while ($lesson = $content_result->fetch_assoc()) {
         $lesson_id = (int)$lesson['id'];

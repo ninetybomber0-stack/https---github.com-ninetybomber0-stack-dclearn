@@ -35,6 +35,18 @@ if ($check_content_res) {
 // ---------------------------------------------------------
 
 $page = $_GET['page'] ?? 'home'; // กำหนดค่า page (ถ้าไม่มีให้เป็น 'home')
+
+// --- ตรวจสอบการทำแบบทดสอบก่อนเรียน (Pre-test) สำหรับบทที่ 1 ---
+if ($page === 'content' && isset($_GET['chapter']) && (int)$_GET['chapter'] === 1 && isset($_SESSION['sess_userid'])) {
+    $uid_chk_pre = (int)$_SESSION['sess_userid'];
+    // ตรวจสอบว่ามีคะแนน Pre-test บทที่ 1 หรือยัง (ไม่สนคะแนน 0 ก็ถือว่าทำแล้ว)
+    $chk_pre_score = $mysqli->query("SELECT id FROM tb_scores WHERE member_id = $uid_chk_pre AND lesson_id = 1 AND test_type = 'PRE'");
+    if ($chk_pre_score->num_rows === 0) {
+        // ยังไม่เคยทำ -> เด้งไปหน้า Pre-test
+        header("Location: index.php?page=pretest&lesson_id=1");
+        exit;
+    }
+}
 ?>
 <!doctype html>
 <html lang="th">

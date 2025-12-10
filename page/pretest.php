@@ -100,6 +100,7 @@ if ($lesson_id > 0) {
                         <p class="lead text-muted" id="scoreText"></p>
                         <hr>
                         <a href="index.php" class="btn btn-outline-primary mt-3">กลับหน้าหลัก</a>
+                        <a href="index.php?page=content&chapter=<?= $lesson_id ?>" class="btn btn-primary mt-3 ms-2">เข้าสู่บทเรียน</a>
                     </div>
                 </div>
 
