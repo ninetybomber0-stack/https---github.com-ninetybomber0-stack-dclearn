@@ -328,8 +328,8 @@ echo '</script>';
             const choice = question.choices[key];
             const button = document.createElement('button');
             button.className = 'list-group-item list-group-item-action text-start';
-            button.textContent = `${key}. ${choice}`;
-            button.onclick = () => handleAnswer(key, question.correct);
+            button.textContent = choice; // Remove key prefix (A. B. etc)
+            button.onclick = () => handleAnswer(key, question.correct, question.choices[question.correct]);
             questionChoices.appendChild(button);
         }
         continueBtn.style.display = 'none';
@@ -352,7 +352,7 @@ echo '</script>';
         }, 15000); // 15 วินาที
     }
 
-    function handleAnswer(selected, correct) {
+    function handleAnswer(selected, correct, correctText) {
         clearTimeout(questionTimeout); // ยกเลิกการจับเวลาเมื่อผู้ใช้ตอบ
         // Disable all choices
         const buttons = questionChoices.querySelectorAll('button');
@@ -362,7 +362,7 @@ echo '</script>';
             questionFeedback.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>ถูกต้อง!</span>';
             // TODO: Add score via AJAX if needed
         } else {
-            questionFeedback.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correct}</span>`;
+            questionFeedback.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correctText}</span>`;
         }
         continueBtn.style.display = 'block';
     }
