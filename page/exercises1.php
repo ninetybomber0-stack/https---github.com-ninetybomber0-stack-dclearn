@@ -167,7 +167,7 @@ if ($chapter_id > 0 && $firstVideo) {
       <p>คุณได้คะแนน: <span id="final-score">0</span> / <?= count($questions) ?></p>
       <!-- จะบันทึกอัตโนมัติ แต่คงปุ่มไว้เป็น fallback -->
       <form id="score-form" method="post" action="page/save_score.php">
-        <input type="hidden" name="student_id" value="<?=$id_std?>">
+        <input type="hidden" name="member_id" value="<?=$_SESSION['sess_userid'] ?? ''?>">
         <input type="hidden" name="lesson_id" value="<?=$chapter_id?>">
         <input type="hidden" id="score_to_save" name="score" value="">
         <input type="hidden" name="total_questions" value="<?= count($questions) ?>">

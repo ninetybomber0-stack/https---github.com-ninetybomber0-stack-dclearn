@@ -98,11 +98,11 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
     
     // 5. Get all quiz scores for all students
     $score_result = $mysqli->query(
-        "SELECT student_id, lesson_id, MAX(score) as max_score FROM tb_scores GROUP BY student_id, lesson_id"
+        "SELECT member_id, lesson_id, MAX(score) as max_score FROM tb_scores GROUP BY member_id, lesson_id"
     );
     if ($score_result) {
         while ($row = $score_result->fetch_assoc()) {
-            $scores_data[$row['student_id']][$row['lesson_id']] = $row['max_score'];
+            $scores_data[$row['member_id']][$row['lesson_id']] = $row['max_score'];
         }
     }
 
@@ -142,6 +142,7 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                     <?php else: ?>
                         <?php foreach ($students as $index => $student): 
                             $student_std_id = $student['id_std'];
+                            $student_pk = $student['id']; // PK for tb_scores lookup
                             $collapse_id = "collapse-student-" . $student['id'];
                             $header_id = "header-student-" . $student['id'];
                         ?>
@@ -175,8 +176,8 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                         <td>บทที่ <?= htmlspecialchars($lesson_id) ?>: <?= htmlspecialchars($lesson_name) ?></td>
                                                                         <td class="text-center">
                                                                             <?php
-                                                                            if (isset($scores_data[$student_std_id]) && isset($scores_data[$student_std_id][$lesson_id])) {
-                                                                                $score = (int)$scores_data[$student_std_id][$lesson_id];
+                                                                            if (isset($scores_data[$student_pk]) && isset($scores_data[$student_pk][$lesson_id])) {
+                                                                                $score = (int)$scores_data[$student_pk][$lesson_id];
                                                                                 $total = isset($total_points[$lesson_id]) ? (int)$total_points[$lesson_id] : 0;
                                                                                 $percentage = ($total > 0) ? round(($score / $total) * 100) : 0;
                                                                                 echo '<span class="text-success fw-bold">✓ ' . $percentage . '</span>';

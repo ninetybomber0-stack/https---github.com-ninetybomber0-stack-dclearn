@@ -31,27 +31,27 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // ใช้ข้อมูลจาก Session เพื่อความปลอดภัย แทนการรับจาก POST โดยตรง
-$student_id = $_SESSION['sess_id_std'] ?? null; // ใช้ id_std จาก session
+$member_id = $_SESSION['sess_userid'] ?? null; // ใช้ User ID (PK) จาก session
 $lesson_id  = $_POST['lesson_id'] ?? null;      // lesson_id ยังคงรับจาก form ได้
 $score      = isset($_POST['score']) ? (int)$_POST['score'] : 0;
 
-if (empty($student_id) || empty($lesson_id)) {
+if (empty($member_id) || empty($lesson_id)) {
   http_response_code(400);
-  exit('missing params: student_id/lesson_id');
+  exit('missing params: member_id/lesson_id');
 }
 
 // ตรวจว่าเราอยู่ DB ไหน (กันต่อคนละ DB แล้วหาไม่เจอ)
 list($current_db) = $mysqli->query("SELECT DATABASE()")->fetch_row();
 
 // ใช้ prepared statement
-$sql = "INSERT INTO tb_scores (student_id, lesson_id, score) VALUES (?, ?, ?)";
+$sql = "INSERT INTO tb_scores (member_id, lesson_id, score) VALUES (?, ?, ?)";
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) {
   http_response_code(500);
   exit("DB prepare error: " . $mysqli->error . " | DB=" . $current_db);
 }
 
-if (!$stmt->bind_param('ssi', $student_id, $lesson_id, $score)) {
+if (!$stmt->bind_param('isi', $member_id, $lesson_id, $score)) {
   http_response_code(500);
   exit("bind_param error: " . $stmt->error);
 }
@@ -62,5 +62,5 @@ if (!$stmt->execute()) {
 }
 
 echo "บันทึกคะแนนสำเร็จ";
-//student_id={$student_id}, lesson_id={$lesson_id}, score={$score} | rows={$stmt->affected_rows} | last_id={$mysqli->insert_id} | DB={$current_db}
+//member_id={$member_id}, lesson_id={$lesson_id}, score={$score} | rows={$stmt->affected_rows} | last_id={$mysqli->insert_id} | DB={$current_db}
 ?>
