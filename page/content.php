@@ -28,7 +28,7 @@ if ($content_result) {
         
         // ดึงคำถามสำหรับบทเรียนนี้
         $questions = [];
-        $stmt_q = $mysqli->prepare("SELECT * FROM tb_test WHERE lesson_id = ?");
+        $stmt_q = $mysqli->prepare("SELECT * FROM tb_test WHERE lesson_id = ? AND test_type = 'QUIZ' ORDER BY timeshow ASC");
         $stmt_q->bind_param('i', $lesson_id);
         $stmt_q->execute();
         $questions_result = $stmt_q->get_result();
