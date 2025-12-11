@@ -54,14 +54,16 @@
 2. [x] คำอธิบายรายวิชาในหน้าแรก
 3. [x] เพิ่มร่ยละเอียดในรายละเอียดรายวิชา
    50-406-081-302 การสื่อสารข้อมูลและเครือข่ายคอมพิวเตอร์ 
-   Data Communications and Computer Networks 
-   คำอธิบายรายวิชา 
-   3(2-2-5) 
-   หลักการสื่อสารข้อมูลทางคอมพิวเตอร์ สถาปัตยกรรมการสื ่อสารข้อมูล แบบจำลองโอ
-    เอสไอ แบบจำลองอินเทอร์เน็ต เครือข่ายคอมพิวเตอร์ท้องถิ่น 
-   Principles of computer data communication; communication architecture; 
-   OSI model; internet model; local area networks 
-   ผลลัพธ์การเรียนรู้ของรายวิชา : 
+- [x] Analyze codebase and database schema <!-- id: 0 -->
+    - [x] Check `index.php` routing
+    - [x] Check `page/index.php` or `index.php` for the button location
+    - [x] Identify relevant database tables (`tb_member`, `tb_scores`, `tb_work_submissions`, etc.)
+- [x] Create/Edit `page/score.php` <!-- id: 1 -->
+    - [x] Design the table layout
+    - [x] Write SQL queries to fetch student progress
+    - [x] Implement the logic to display "Done/Not Done" or scores for each category
+- [x] Update `index.php` or navigation if necessary to link to `page/score.php` <!-- id: 2 -->
+- [x] Verify the implementation <!-- id: 3 -->ผลลัพธ์การเรียนรู้ของรายวิชา : 
    CLO1 : เข้าใจเรื่องความซื่อสัตย์ สุจริต และการมีจรรยาบรรณในวิชาชีพ 
    CLO2 : เข้าใจเรื่องการมีความรับผิดชอบและความตรงต่อเวลา 
    CLO3 : อธิบายหลักการการการสื่อสารข้อมูลและเครือข่ายคอมพิวเตอร์ได้
@@ -83,3 +85,4 @@
  6. แก้เพิ่ม PDf ทำทีหลังแต่ได้ละ 
 
  7. เก็บข้อมูลว่าเคยเรียนบทนี้แล้วหรือยังไม่เคยเรียน
+

@@ -159,6 +159,7 @@ if ($page === 'content' && isset($_GET['chapter']) && (int)$_GET['chapter'] === 
           ?>
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="index.php?page=score">คะแนนและการส่งงาน</a></li>
             <li><a class="dropdown-item" href="index.php?page=changepw&id=<?php echo $_SESSION['sess_userid'] ?? ''; ?>">เปลี่ยนรหัสผ่าน</a></li>
             <li><a class="dropdown-item" href="module/member/logout.php">ออกจากระบบ</a></li>
           </ul>
@@ -220,6 +221,8 @@ if($page=="work"){
     include "page/manage_quizzes.php";
 }elseif($page=="changepw"){
     include "page/change_password.php";
+}elseif($page=="score"){
+    include "page/score.php";
 }elseif($page=="pretest"){
     include "page/pretest.php";
 }else{
