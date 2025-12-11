@@ -84,9 +84,9 @@ if ($res_l) {
 }
 
 
-// 3. Get Chapter Quiz Scores (tb_scores)
-$chapter_scores = [];
-$score_sql = "SELECT lesson_id, MAX(score) as score, total FROM tb_scores WHERE member_id = ? GROUP BY lesson_id";
+// 3. Get Scores (PRE, QUIZ, POST) from tb_scores
+$course_scores = [];
+$score_sql = "SELECT lesson_id, test_type, score, full_score FROM tb_scores WHERE member_id = ?";
 $stmt = $mysqli->prepare($score_sql);
 if ($stmt) {
     $stmt->bind_param('i', $user_id);
@@ -94,11 +94,13 @@ if ($stmt) {
     $res_s = $stmt->get_result();
     if ($res_s) {
         while ($row = $res_s->fetch_assoc()) {
-            $chapter_scores[$row['lesson_id']] = $row;
+            $lid = $row['lesson_id'];
+            $type = strtoupper($row['test_type']);
+            if ($type) {
+                $course_scores[$lid][$type] = $row;
+            }
         }
     }
-} else {
-   // echo "Error preparing score query: " . $mysqli->error;
 }
 
 // 4. Get Assignments (tb_work)
@@ -173,47 +175,57 @@ if ($user_std_id) {
         <h5 class="card-title mb-0"><i class="bi bi-journal-check me-2 text-primary"></i>บทเรียนและคะแนนเก็บ</h5>
       </div>
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 text-center">
           <thead class="table-light">
             <tr>
-              <th style="width: 40%">บทเรียน</th>
-              <th class="text-center">คะแนนคำถาม</th>
-
+              <th class="text-start" style="width: 30%">บทเรียน</th>
+              <th style="width: 20%">ก่อนเรียน (Pre)</th>
+              <th style="width: 20%">ระหว่างเรียน (Quiz)</th>
+              <th style="width: 20%">หลังเรียน (Post)</th>
             </tr>
           </thead>
           <tbody>
             <?php foreach ($lessons as $lid => $l): 
-                $lid_text = $l['lesson_id_text'];
+                // Get scores for this lesson
+                $scores = $course_scores[$lid] ?? [];
                 
-                // Video Progress
-                $total_q = $total_questions[$lid_text] ?? 0;
-                $done_q = $answered_questions[$lid_text] ?? 0;
-                $vid_percent = ($total_q > 0) ? ($done_q / $total_q) * 100 : 0;
-                
-                // Chapter Score
-                $score_info = $chapter_scores[$lid] ?? null;
-                $my_score = $score_info ? $score_info['score'] : 0;
-                // Use score from tb_scores logic or fallback? 
-                // user_list.php uses tb_test sum points. tb_content has 'score' column too.
-                // Let's stick to simple display.
-                $max_score = $l['max_score']; // from tb_content
-                $score_percent = ($max_score > 0) ? ($my_score / $max_score) * 100 : 0;
+                $pre = $scores['PRE'] ?? null;
+                $quiz = $scores['QUIZ'] ?? null; // Video Pop-up questions
+                $post = $scores['POST'] ?? null;
             ?>
             <tr>
-              <td>
+              <td class="text-start">
                 <div class="fw-semibold text-dark"><?= htmlspecialchars($l['name']) ?></div>
                 <div class="small text-muted">บทที่ <?= $lid ?></div>
               </td>
-              <td class="text-center">
-                <?php if ($total_q == 0): ?>
-                  <span class="text-muted small">-</span>
+              
+              <!-- Pre-test Column -->
+              <td>
+                <?php if ($pre): ?>
+                    <span class="fw-bold text-primary"><?= $pre['score'] ?></span>
+                    <span class="text-muted small">/ <?= $pre['full_score'] ?></span>
                 <?php else: ?>
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="progress w-75" style="height: 6px;">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: <?= $vid_percent ?>%"></div>
-                        </div>
-                        <span class="small mt-1 text-muted"><?= $done_q ?>/<?= $total_q ?> ข้อ</span>
-                    </div>
+                    <span class="text-muted">-</span>
+                <?php endif; ?>
+              </td>
+
+              <!-- In-lesson Quiz Column -->
+              <td>
+                <?php if ($quiz): ?>
+                    <span class="fw-bold text-success"><?= $quiz['score'] ?></span>
+                    <span class="text-muted small">/ <?= $quiz['full_score'] ?></span>
+                <?php else: ?>
+                    <span class="text-muted">-</span>
+                <?php endif; ?>
+              </td>
+
+              <!-- Post-test Column -->
+              <td>
+                <?php if ($post): ?>
+                    <span class="fw-bold text-info"><?= $post['score'] ?></span>
+                    <span class="text-muted small">/ <?= $post['full_score'] ?></span>
+                <?php else: ?>
+                    <span class="text-muted">-</span>
                 <?php endif; ?>
               </td>
 
@@ -317,9 +329,10 @@ if ($user_std_id) {
                         $sum_chapter_score = 0;
                         $sum_chapter_full = 0;
                         foreach ($lessons as $lid => $l) {
-                            $sc = $chapter_scores[$lid] ?? null;
-                            if ($sc) {
-                                $sum_chapter_score += (int)$sc['score'];
+                            $scores = $course_scores[$lid] ?? [];
+                            $post_ch = $scores['POST'] ?? null;
+                            if ($post_ch) {
+                                $sum_chapter_score += (int)$post_ch['score'];
                             }
                             $sum_chapter_full += (int)$l['max_score'];
                         }
