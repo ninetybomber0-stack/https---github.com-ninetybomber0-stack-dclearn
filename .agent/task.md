@@ -62,6 +62,7 @@
     - [x] Design the table layout
     - [x] Write SQL queries to fetch student progress
     - [x] Implement the logic to display "Done/Not Done" or scores for each category
+    - [x] Separate columns for PRE, QUIZ, POST scores <!-- id: 4 -->
 - [x] Update `index.php` or navigation if necessary to link to `page/score.php` <!-- id: 2 -->
 - [x] Verify the implementation <!-- id: 3 -->ผลลัพธ์การเรียนรู้ของรายวิชา : 
    CLO1 : เข้าใจเรื่องความซื่อสัตย์ สุจริต และการมีจรรยาบรรณในวิชาชีพ 

@@ -132,24 +132,7 @@ if ($user_std_id) {
     }
 }
 
-// 6. Get Exam Scores (tb_exam_scores)
-$exam_scores = [];
-if ($user_std_id) {
-    $ex_sql = "SELECT exam_type, score, full_score FROM tb_exam_scores WHERE student_id = ?";
-    $stmt = $mysqli->prepare($ex_sql);
-    if ($stmt) {
-        $stmt->bind_param('s', $user_std_id);
-        $stmt->execute();
-        $res_ex = $stmt->get_result();
-        if ($res_ex) {
-            while ($row = $res_ex->fetch_assoc()) {
-                $exam_scores[$row['exam_type']] = $row;
-            }
-        }
-    } else {
-        // echo "Error preparing exam query: " . $mysqli->error;
-    }
-}
+
 ?>
 
 <div class="row g-4">
@@ -281,81 +264,7 @@ if ($user_std_id) {
             </div>
         </div>
 
-        <!-- Exams -->
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="card-title mb-0"><i class="bi bi-trophy me-2 text-primary"></i>คะแนนสอบ</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Pre-test -->
-                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                        <div>
-                            <div class="fw-semibold">สอบก่อนเรียน</div>
-                            <div class="small text-muted">Pre-test</div>
-                        </div>
-                        <div class="text-end">
-                            <?php 
-                                $pre = $exam_scores['pre_test'] ?? null;
-                            ?>
-                            <div class="h4 mb-0 text-primary fw-bold">
-                                <?= $pre ? $pre['score'] : '-' ?>
-                                <span class="fs-6 text-muted fw-normal">/ <?= $pre ? $pre['full_score'] : '100' ?></span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Post-test -->
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <div class="fw-semibold">สอบหลังเรียน</div>
-                            <div class="small text-muted">Post-test</div>
-                        </div>
-                        <div class="text-end">
-                            <?php 
-                                $post = $exam_scores['post_test'] ?? null;
-                            ?>
-                            <div class="h4 mb-0 text-primary fw-bold">
-                                <?= $post ? $post['score'] : '-' ?>
-                                <span class="fs-6 text-muted fw-normal">/ <?= $post ? $post['full_score'] : '100' ?></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Total Score Calculation -->
-                    <?php
-                        // Calculate Total Score (Chapters + Post-test)
-                        // 1. Chapters
-                        $sum_chapter_score = 0;
-                        $sum_chapter_full = 0;
-                        foreach ($lessons as $lid => $l) {
-                            $scores = $course_scores[$lid] ?? [];
-                            $post_ch = $scores['POST'] ?? null;
-                            if ($post_ch) {
-                                $sum_chapter_score += (int)$post_ch['score'];
-                            }
-                            $sum_chapter_full += (int)$l['max_score'];
-                        }
-
-                        // 2. Post-test
-                        $post_score = $post ? (int)$post['score'] : 0;
-                        $post_full = $post ? (int)$post['full_score'] : 100;
-
-                        $grand_total_score = $sum_chapter_score + $post_score;
-                        $grand_total_full = $sum_chapter_full + $post_full;
-                    ?>
-
-                    <!-- Grand Total Display -->
-                    <div class="bg-primary bg-opacity-10 rounded p-3 text-center mt-3">
-                        <div class="text-primary fw-bold mb-1" style="font-size: 1.1rem;">คะแนนรวมทั้งหมด</div>
-                        <div class="display-4 fw-bold text-primary" style="line-height: 1.2;">
-                            <?= $grand_total_score ?>
-                            <span class="fs-4 text-muted fw-normal">/ <?= $grand_total_full ?></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
   </div>
 </div>
