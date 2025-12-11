@@ -177,8 +177,8 @@ if ($user_std_id) {
           <thead class="table-light">
             <tr>
               <th style="width: 40%">บทเรียน</th>
-              <th class="text-center">คำถามในคลิป</th>
-              <!-- <th class="text-center">แบบทดสอบท้ายบท</th> -->
+              <th class="text-center">คะแนนคำถาม</th>
+
             </tr>
           </thead>
           <tbody>
@@ -216,16 +216,7 @@ if ($user_std_id) {
                     </div>
                 <?php endif; ?>
               </td>
-              <!-- <td class="text-center">
-                 <div class="d-flex flex-column align-items-center">
-                    <?php if ($my_score > 0): ?>
-                        <span class="fw-bold text-success fs-5"><?= $my_score ?></span>
-                        <span class="small text-muted">/ <?= $max_score ?> คะแนน</span>
-                    <?php else: ?>
-                        <span class="text-muted small">ยังไม่มีคะแนน</span>
-                    <?php endif; ?>
-                 </div>
-              </td> -->
+
             </tr>
             <?php endforeach; ?>
           </tbody>
