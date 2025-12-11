@@ -3,13 +3,24 @@
 // Display student's own scores and progress
 
 // 1. Check Login
+// 1. Check Login
 if (!isset($_SESSION['sess_userid'])) {
     echo '<div class="alert alert-danger">กรุณาเข้าสู่ระบบก่อนดูคะแนน</div>';
     return;
 }
 
+// DEBUG: Enable Error Reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 $user_id = $_SESSION['sess_userid'];
-$user_std_id = $_SESSION['sess_id_std'] ?? ''; // Assuming this is set in index.php
+$user_std_id = $_SESSION['sess_id_std'] ?? ''; 
+
+// Check DB Connection
+if (!isset($mysqli) || $mysqli->connect_errno) {
+    echo '<div class="alert alert-danger">Database connection failed.</div>';
+    return;
+}
 
 // --- Data Fetching ---
 
@@ -43,16 +54,21 @@ if ($res_q) {
 }
 
 // B. Get answered questions by this user
+// B. Get answered questions by this user
 $answered_questions = [];
 $ans_sql = "SELECT lesson, COUNT(DISTINCT quiz_id) as answered FROM tb_test_log WHERE user_id = ? GROUP BY lesson";
 $stmt = $mysqli->prepare($ans_sql);
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$res_ans = $stmt->get_result();
-if ($res_ans) {
-    while ($row = $res_ans->fetch_assoc()) {
-        $answered_questions[$row['lesson']] = $row['answered'];
+if ($stmt) {
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $res_ans = $stmt->get_result();
+    if ($res_ans) {
+        while ($row = $res_ans->fetch_assoc()) {
+            $answered_questions[$row['lesson']] = $row['answered'];
+        }
     }
+} else {
+    // echo "Error preparing log query: " . $mysqli->error;
 }
 
 // Map tb_content ID/lesson_id_text to these counts
@@ -72,13 +88,17 @@ if ($res_l) {
 $chapter_scores = [];
 $score_sql = "SELECT lesson_id, MAX(score) as score, total FROM tb_scores WHERE member_id = ? GROUP BY lesson_id";
 $stmt = $mysqli->prepare($score_sql);
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$res_s = $stmt->get_result();
-if ($res_s) {
-    while ($row = $res_s->fetch_assoc()) {
-        $chapter_scores[$row['lesson_id']] = $row;
+if ($stmt) {
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $res_s = $stmt->get_result();
+    if ($res_s) {
+        while ($row = $res_s->fetch_assoc()) {
+            $chapter_scores[$row['lesson_id']] = $row;
+        }
     }
+} else {
+   // echo "Error preparing score query: " . $mysqli->error;
 }
 
 // 4. Get Assignments (tb_work)
@@ -93,18 +113,20 @@ if ($res_w) {
 
 // 5. Get Student Submissions (tb_work_submissions)
 $submissions = [];
-// Assuming tb_work_submissions uses 'student_id' (varchar) OR 'user_id' (int)?
-// Checked user_list.php: uses 'student_id' column. AND assumes it matches 'id_std' from session.
 if ($user_std_id) {
     $sub_sql = "SELECT work_id, submitted_at FROM tb_work_submissions WHERE student_id = ?";
     $stmt = $mysqli->prepare($sub_sql);
-    $stmt->bind_param('s', $user_std_id);
-    $stmt->execute();
-    $res_sub = $stmt->get_result();
-    if ($res_sub) {
-        while ($row = $res_sub->fetch_assoc()) {
-            $submissions[$row['work_id']] = $row;
+    if ($stmt) {
+        $stmt->bind_param('s', $user_std_id);
+        $stmt->execute();
+        $res_sub = $stmt->get_result();
+        if ($res_sub) {
+            while ($row = $res_sub->fetch_assoc()) {
+                $submissions[$row['work_id']] = $row;
+            }
         }
+    } else {
+        // echo "Error preparing submission query: " . $mysqli->error;
     }
 }
 
@@ -113,13 +135,17 @@ $exam_scores = [];
 if ($user_std_id) {
     $ex_sql = "SELECT exam_type, score, full_score FROM tb_exam_scores WHERE student_id = ?";
     $stmt = $mysqli->prepare($ex_sql);
-    $stmt->bind_param('s', $user_std_id);
-    $stmt->execute();
-    $res_ex = $stmt->get_result();
-    if ($res_ex) {
-        while ($row = $res_ex->fetch_assoc()) {
-            $exam_scores[$row['exam_type']] = $row;
+    if ($stmt) {
+        $stmt->bind_param('s', $user_std_id);
+        $stmt->execute();
+        $res_ex = $stmt->get_result();
+        if ($res_ex) {
+            while ($row = $res_ex->fetch_assoc()) {
+                $exam_scores[$row['exam_type']] = $row;
+            }
         }
+    } else {
+        // echo "Error preparing exam query: " . $mysqli->error;
     }
 }
 ?>
@@ -277,7 +303,7 @@ if ($user_std_id) {
                     </div>
 
                     <!-- Post-test -->
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
                             <div class="fw-semibold">สอบหลังเรียน</div>
                             <div class="small text-muted">Post-test</div>
@@ -290,6 +316,37 @@ if ($user_std_id) {
                                 <?= $post ? $post['score'] : '-' ?>
                                 <span class="fs-6 text-muted fw-normal">/ <?= $post ? $post['full_score'] : '100' ?></span>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Score Calculation -->
+                    <?php
+                        // Calculate Total Score (Chapters + Post-test)
+                        // 1. Chapters
+                        $sum_chapter_score = 0;
+                        $sum_chapter_full = 0;
+                        foreach ($lessons as $lid => $l) {
+                            $sc = $chapter_scores[$lid] ?? null;
+                            if ($sc) {
+                                $sum_chapter_score += (int)$sc['score'];
+                            }
+                            $sum_chapter_full += (int)$l['max_score'];
+                        }
+
+                        // 2. Post-test
+                        $post_score = $post ? (int)$post['score'] : 0;
+                        $post_full = $post ? (int)$post['full_score'] : 100;
+
+                        $grand_total_score = $sum_chapter_score + $post_score;
+                        $grand_total_full = $sum_chapter_full + $post_full;
+                    ?>
+
+                    <!-- Grand Total Display -->
+                    <div class="bg-primary bg-opacity-10 rounded p-3 text-center mt-3">
+                        <div class="text-primary fw-bold mb-1" style="font-size: 1.1rem;">คะแนนรวมทั้งหมด</div>
+                        <div class="display-4 fw-bold text-primary" style="line-height: 1.2;">
+                            <?= $grand_total_score ?>
+                            <span class="fs-4 text-muted fw-normal">/ <?= $grand_total_full ?></span>
                         </div>
                     </div>
                 </div>
