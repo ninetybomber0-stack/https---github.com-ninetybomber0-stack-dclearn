@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $member_id = $_SESSION['sess_userid'] ?? null; // ใช้ User ID (PK) จาก session
 $lesson_id  = $_POST['lesson_id'] ?? null;      // lesson_id ยังคงรับจาก form ได้
 $score      = isset($_POST['score']) ? (int)$_POST['score'] : 0;
+$full_score = isset($_POST['full_score']) ? (int)$_POST['full_score'] : 0; // รับค่าคะแนนเต็ม
 // รับค่า test_type เพิ่มเติม (ถ้ามี) ค่าเริ่มต้นให้เป็น QUIZ หรือ NULL ตามต้องการ
 $test_type  = $_POST['test_type'] ?? 'QUIZ'; 
 
@@ -45,15 +46,24 @@ if (empty($member_id) || empty($lesson_id)) {
 // ตรวจว่าเราอยู่ DB ไหน (กันต่อคนละ DB แล้วหาไม่เจอ)
 list($current_db) = $mysqli->query("SELECT DATABASE()")->fetch_row();
 
-// ใช้ prepared statement
-$sql = "INSERT INTO tb_scores (member_id, lesson_id, score, test_type) VALUES (?, ?, ?, ?)";
+// ลบของเก่าก่อน (เพื่อกันซ้ำ และเป็นการ Update ไปในตัว)
+$del_sql = "DELETE FROM tb_scores WHERE member_id = ? AND lesson_id = ? AND test_type = ?";
+$stmt_del = $mysqli->prepare($del_sql);
+if ($stmt_del) {
+    $stmt_del->bind_param('iis', $member_id, $lesson_id, $test_type);
+    $stmt_del->execute();
+    $stmt_del->close();
+}
+
+// ใช้ prepared statement เพิ่มข้อมูลใหม่
+$sql = "INSERT INTO tb_scores (member_id, lesson_id, score, full_score, test_type) VALUES (?, ?, ?, ?, ?)";
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) {
   http_response_code(500);
   exit("DB prepare error: " . $mysqli->error . " | DB=" . $current_db);
 }
 
-if (!$stmt->bind_param('isis', $member_id, $lesson_id, $score, $test_type)) {
+if (!$stmt->bind_param('iiiis', $member_id, $lesson_id, $score, $full_score, $test_type)) {
   http_response_code(500);
   exit("bind_param error: " . $stmt->error);
 }

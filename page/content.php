@@ -241,6 +241,8 @@ echo '</script>';
 
     let current = 0; // index
     let questionTimeout; // ตัวแปรสำหรับจับเวลาตอนคำถามแสดง
+    let currentScore = 0; // คะแนนที่ได้จากการตอบถูก
+    let totalQuestions = 0; // จำนวนคำถามทั้งหมดในบทเรียนนี้
 
     function renderList(){
         totalCount.textContent = lessons.length;
@@ -262,6 +264,11 @@ echo '</script>';
     function loadLesson(idx){
         current = idx;
         const l = lessons[idx];
+        
+        // Reset Score for new lesson
+        currentScore = 0;
+        totalQuestions = l.questions ? l.questions.length : 0;
+
         document.getElementById('lessonTitle').textContent = l.title;
         bcLesson.textContent = l.title;
         if (l.slide && l.slide !== '#' && l.slide.trim() !== '') {
@@ -287,8 +294,13 @@ echo '</script>';
         });
 
         const done = localStorage.getItem('done_'+l.id) === '1';
-        btnComplete.disabled = done;
-        btnComplete.textContent = done ? 'เรียนจบแล้ว' : 'ทำบทเรียนนี้แล้ว';
+        if (done) {
+            btnComplete.disabled = true;
+            btnComplete.textContent = 'เรียนจบแล้ว';
+        } else {
+            btnComplete.disabled = true; // Lock initially
+            btnComplete.textContent = 'กรุณาดูวิดีโอจนจบ';
+        }
 
         // Reset shown status for questions of the new lesson
         resetQuestionShown();
@@ -316,8 +328,10 @@ echo '</script>';
             const choice = question.choices[key];
             const button = document.createElement('button');
             button.className = 'list-group-item list-group-item-action text-start';
-            button.textContent = choice; // Remove key prefix (A. B. etc)
-            button.onclick = () => handleAnswer(key, question.correct, question.choices[question.correct]);
+            // Remove prefixes like "A.", "1.", "ก.", "A)", "1)", "ก)" at the start
+            // Regex explanation: ^ matches start, [A-Za-z0-9ก-ฮ]+ matches alpha/num/Thai, [\.\)] matches dot or closing paren, \s* matches optional space
+            button.textContent = choice.replace(/^[A-Za-z0-9ก-ฮ]+[\.\)]\s*/, ''); 
+            button.onclick = () => handleAnswer(key, question.correct, question.choices[question.correct].replace(/^[A-Za-z0-9ก-ฮ]+[\.\)]\s*/, ''));
             questionChoices.appendChild(button);
         }
         continueBtn.style.display = 'none';
@@ -348,9 +362,12 @@ echo '</script>';
 
         if (selected === correct) {
             questionFeedback.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>ถูกต้อง!</span>';
-            // TODO: Add score via AJAX if needed
+            // Increase score
+            currentScore++;
+            saveScore(); // Auto-save score on correct answer
         } else {
             questionFeedback.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>ยังไม่ถูก, คำตอบที่ถูกต้องคือ ${correctText}</span>`;
+            saveScore(); // Auto-save score even if wrong (to update full_score or attempts)
         }
         continueBtn.style.display = 'block';
     }
@@ -374,6 +391,13 @@ echo '</script>';
         if(!player.duration) return;
         const p = Math.floor(player.currentTime * 100 / player.duration);
         prog.style.width = p+"%"; prog.textContent = p+"%";
+
+        // Enable complete button when near end (> 95%)
+        if (p > 95 && !btnComplete.disabled && btnComplete.textContent !== 'เรียนจบแล้ว') {
+             // Already enabled or done, do nothing
+        } else if (p > 95 && btnComplete.textContent !== 'เรียนจบแล้ว' && localStorage.getItem('done_'+lessons[current].id) !== '1') {
+             completeLesson(); // Auto-complete
+        }
 
         // Highlight transcript
         const cues = Array.from(transcriptEl.querySelectorAll('.cue'));
@@ -401,11 +425,45 @@ echo '</script>';
     });
 
     btnComplete.addEventListener('click', ()=>{
-        const l = lessons[current];
-        localStorage.setItem('done_'+l.id, '1');
-        btnComplete.disabled = true; btnComplete.textContent = 'เรียนจบแล้ว';
-        updateCompletedCounter(); renderList();
+        completeLesson();
     });
+
+    function completeLesson() {
+        const l = lessons[current];
+        // Prevent multiple calls if already done
+        if (localStorage.getItem('done_'+l.id) === '1') return;
+
+        // Save Score before completing
+        saveScore();
+
+        localStorage.setItem('done_'+l.id, '1');
+        btnComplete.disabled = true; 
+        btnComplete.textContent = 'เรียนจบแล้ว';
+        btnComplete.classList.remove('btn-success');
+        btnComplete.classList.add('btn-secondary'); // Visual feedback
+        updateCompletedCounter(); renderList();
+    }
+
+    function saveScore() {
+        const l = lessons[current];
+        const formData = new FormData();
+        formData.append('lesson_id', l.db_id);
+        formData.append('score', currentScore);
+        formData.append('full_score', totalQuestions);
+        formData.append('test_type', 'QUIZ');
+
+        fetch('page/save_score.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(data => {
+            console.log("Score Saved:", data);
+        })
+        .catch(error => {
+            console.error('Error saving score:', error);
+        });
+    }
 
 
 
