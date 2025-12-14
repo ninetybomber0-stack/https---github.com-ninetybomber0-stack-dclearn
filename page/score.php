@@ -158,64 +158,91 @@ if ($user_std_id) {
         <h5 class="card-title mb-0"><i class="bi bi-journal-check me-2 text-primary"></i>บทเรียนและคะแนนเก็บ</h5>
       </div>
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 text-center">
-          <thead class="table-light">
-            <tr>
-              <th class="text-start" style="width: 30%">บทเรียน</th>
-              <th style="width: 20%">ก่อนเรียน (Pre)</th>
-              <th style="width: 20%">ระหว่างเรียน (Quiz)</th>
-              <th style="width: 20%">หลังเรียน (Post)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($lessons as $lid => $l): 
-                // Get scores for this lesson
-                $scores = $course_scores[$lid] ?? [];
-                
-                $pre = $scores['PRE'] ?? null;
-                $quiz = $scores['QUIZ'] ?? null; // Video Pop-up questions
-                $post = $scores['POST'] ?? null;
+            <?php 
+            // Calculate Global Pre/Post Scores
+            $global_pre = null;
+            $global_post = null;
+            foreach ($course_scores as $lid => $scores) {
+                if (isset($scores['PRE'])) $global_pre = $scores['PRE'];
+                if (isset($scores['POST'])) $global_post = $scores['POST'];
+            }
             ?>
-            <tr>
-              <td class="text-start">
-                <div class="fw-semibold text-dark"><?= htmlspecialchars($l['name']) ?></div>
-                <div class="small text-muted">บทที่ <?= $lid ?></div>
-              </td>
-              
-              <!-- Pre-test Column -->
-              <td>
-                <?php if ($pre): ?>
-                    <span class="fw-bold text-primary"><?= $pre['score'] ?></span>
-                    <span class="text-muted small">/ <?= $pre['full_score'] ?></span>
-                <?php else: ?>
-                    <span class="text-muted">-</span>
-                <?php endif; ?>
-              </td>
 
-              <!-- In-lesson Quiz Column -->
-              <td>
-                <?php if ($quiz): ?>
-                    <span class="fw-bold text-success"><?= $quiz['score'] ?></span>
-                    <span class="text-muted small">/ <?= $quiz['full_score'] ?></span>
-                <?php else: ?>
-                    <span class="text-muted">-</span>
-                <?php endif; ?>
-              </td>
+            <!-- Pre/Post Score Summary -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-primary bg-opacity-10 border-0 h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-white p-3 rounded-circle text-primary shadow-sm">
+                                <i class="bi bi-clipboard-data fs-2"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="text-muted mb-1">คะแนนทดสอบก่อนเรียน (Pre-test)</h6>
+                                <div class="fs-4 fw-bold text-dark">
+                                    <?php if ($global_pre): ?>
+                                        <?= $global_pre['score'] ?> <span class="fs-6 text-muted">/ <?= $global_pre['full_score'] ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-success bg-opacity-10 border-0 h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="flex-shrink-0 bg-white p-3 rounded-circle text-success shadow-sm">
+                                <i class="bi bi-clipboard-check fs-2"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="text-muted mb-1">คะแนนทดสอบหลังเรียน (Post-test)</h6>
+                                <div class="fs-4 fw-bold text-dark">
+                                    <?php if ($global_post): ?>
+                                        <?= $global_post['score'] ?> <span class="fs-6 text-muted">/ <?= $global_post['full_score'] ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-              <!-- Post-test Column -->
-              <td>
-                <?php if ($post): ?>
-                    <span class="fw-bold text-info"><?= $post['score'] ?></span>
-                    <span class="text-muted small">/ <?= $post['full_score'] ?></span>
-                <?php else: ?>
-                    <span class="text-muted">-</span>
-                <?php endif; ?>
-              </td>
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-start" style="width: 70%">บทเรียน</th>
+                  <th class="text-center" style="width: 30%">ระหว่างเรียน (Quiz)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($lessons as $lid => $l): 
+                    // Get scores for this lesson
+                    $scores = $course_scores[$lid] ?? [];
+                    $quiz = $scores['QUIZ'] ?? null; // Video Pop-up questions
+                ?>
+                <tr>
+                  <td class="text-start">
+                    <div class="fw-semibold text-dark"><?= htmlspecialchars($l['name']) ?></div>
+                    <div class="small text-muted">บทที่ <?= $lid ?></div>
+                  </td>
+                  
+                  <!-- In-lesson Quiz Column -->
+                  <td class="text-center">
+                    <?php if ($quiz): ?>
+                        <span class="fw-bold text-success display-6" style="font-size: 1.2rem;"><?= $quiz['score'] ?></span>
+                        <span class="text-muted small">/ <?= $quiz['full_score'] ?></span>
+                    <?php else: ?>
+                        <span class="text-muted">-</span>
+                    <?php endif; ?>
+                  </td>
 
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
       </div>
     </div>
   </div>

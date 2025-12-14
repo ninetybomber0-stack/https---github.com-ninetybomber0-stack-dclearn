@@ -5,6 +5,9 @@
 require_once __DIR__ . '/../config/connect.php';
 
 $lesson_id = isset($_GET['lesson_id']) ? (int)$_GET['lesson_id'] : 0;
+$test_type_param = isset($_GET['type']) && $_GET['type'] === 'post' ? 'post' : 'pre';
+$page_title_prefix = $test_type_param === 'post' ? "แบบทดสอบหลังเรียน" : "แบบทดสอบก่อนเรียน";
+
 $lesson_title = "";
 
 // Fetch Lesson Info
@@ -43,13 +46,13 @@ if ($lesson_id > 0) {
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="index.php">หน้าแรก</a></li>
-            <li class="breadcrumb-item active" aria-current="page">แบบทดสอบก่อนเรียน</li>
+            <li class="breadcrumb-item active" aria-current="page"><?= $page_title_prefix ?></li>
         </ol>
     </nav>
 
     <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body p-4">
-            <h2 class="mb-4">แบบทดสอบก่อนเรียน: <?= htmlspecialchars($lesson_title) ?></h2>
+            <h2 class="mb-4"><?= $page_title_prefix ?>: <?= htmlspecialchars($lesson_title) ?></h2>
             
             <?php if (empty($questions)): ?>
                 <div class="alert alert-info">
@@ -183,7 +186,7 @@ function submitPretest() {
     const formData = new FormData();
     formData.append('lesson_id', <?= $lesson_id ?>);
     formData.append('score', score);
-    formData.append('test_type', 'PRE');
+    formData.append('test_type', '<?= $test_type_param === 'post' ? 'POST' : 'PRE' ?>');
 
     fetch('page/save_score.php', {
         method: 'POST',

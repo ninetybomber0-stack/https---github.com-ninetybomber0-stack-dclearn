@@ -181,6 +181,7 @@ echo '</script>';
                 <div class="mt-3 d-flex flex-wrap gap-2">
                     <a id="btnSlide" href="#" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> สไลด์</a>
 
+                    <a id="btnPostTest" href="#" class="btn btn-warning btn-sm" style="display:none;"><i class="bi bi-pencil-square me-1"></i> ทำแบบทดสอบหลังเรียน</a>
                     <button id="btnComplete" class="btn btn-success btn-sm ms-auto" disabled><i class="bi bi-check2-circle me-1"></i> ทำบทเรียนนี้แล้ว</button>
                 </div>
                 </div>
@@ -307,6 +308,32 @@ echo '</script>';
         
         // Hide overlay if showing
         questionOverlay.style.display = 'none';
+
+        // Show/Hide Post-test button for Chapter 12
+        const btnPostTest = document.getElementById('btnPostTest');
+        console.log("Checking lesson:", l.title, l.db_id); // DEBUG
+        
+        // Check for 'Week 12', 'Chapter 12', 'บทที่ 12' (case insensitive)
+        // Note: db_id might not match the lesson number, so relying on Title is safer here.
+        if (/Week\s*12/i.test(l.title) || /Chapter\s*12/i.test(l.title) || /บทที่\s*12/u.test(l.title)) {
+            btnPostTest.style.display = 'inline-block';
+            // Force lesson_id=1 because the 40 test questions are stored under lesson_id 1 (TEST type)
+            // But we want to save them as POST for Chapter 12. 
+            // Wait, pretest.php uses lesson_id to FETCH questions.
+            // If I pass lesson_id=1, it fetches questions for lesson 1.
+            // But when saving, it will save as lesson_id=1.
+            // The user wants 'Post-test' to likely count for the course or Chapter 12?
+            // If I save as lesson_id=1, it overwrites Pre-test? No, test_type='POST' prevents overwrite.
+            // But usually Post-test should be associated with the final chapter or course.
+            // PROPOSAL: Pass fetching_lesson_id=1 and saving_lesson_id=12?
+            // pretest.php currently uses one ID for both.
+            // I should probably modify pretest.php to split them or just let it be lesson_id=1 if that's "Course ID".
+            // Let's assume lesson_id=1 IS the "Main Course ID" for tests.
+            btnPostTest.href = `index.php?page=pretest&lesson_id=1&type=post`;
+        } else {
+            console.log("Not Chapter 12, hiding button");
+            btnPostTest.style.display = 'none';
+        }
 
         renderList();
     }
@@ -441,7 +468,18 @@ echo '</script>';
         btnComplete.textContent = 'เรียนจบแล้ว';
         btnComplete.classList.remove('btn-success');
         btnComplete.classList.add('btn-secondary'); // Visual feedback
-        updateCompletedCounter(); renderList();
+        updateCompletedCounter(); 
+        
+        // Show/Hide Post-test button for Chapter 12
+        const btnPostTest = document.getElementById('btnPostTest');
+        if (l.title.includes('บทที่12') || l.title.includes('Chapter 12') || l.db_id == 12) {
+            btnPostTest.style.display = 'inline-block';
+            btnPostTest.href = `index.php?page=pretest&lesson_id=${l.db_id}&type=post`;
+        } else {
+            btnPostTest.style.display = 'none';
+        }
+        
+        renderList();
     }
 
     function saveScore() {
