@@ -24,6 +24,7 @@ $content_result = $mysqli->query("SELECT * FROM tb_content ORDER BY lesson_order
 
 
 if ($content_result) {
+    $lesson_index = 1;
     while ($lesson = $content_result->fetch_assoc()) {
         $lesson_id = (int)$lesson['id'];
         
@@ -66,7 +67,7 @@ if ($content_result) {
         $lessons_data[] = [
             'id' => $lesson['lesson_id_text'] ?? "lesson-{$lesson_id}",
             'db_id' => $lesson_id,
-            'title' => $lesson['title'] ?? $lesson['name'],
+            'title' => "บทที่ " . $lesson_index++,
             'slide' => $lesson['slide_url'] ?? '#',
 
             'sources' => [
