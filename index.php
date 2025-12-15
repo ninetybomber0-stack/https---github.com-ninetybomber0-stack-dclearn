@@ -159,7 +159,9 @@ if ($page === 'content' && isset($_GET['chapter']) && (int)$_GET['chapter'] === 
           ?>
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
+            <?php if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'): ?>
             <li><a class="dropdown-item" href="index.php?page=score">คะแนนและการส่งงาน</a></li>
+            <?php endif; ?>
             <li><a class="dropdown-item" href="index.php?page=changepw&id=<?php echo $_SESSION['sess_userid'] ?? ''; ?>">เปลี่ยนรหัสผ่าน</a></li>
             <li><a class="dropdown-item" href="module/member/logout.php">ออกจากระบบ</a></li>
           </ul>

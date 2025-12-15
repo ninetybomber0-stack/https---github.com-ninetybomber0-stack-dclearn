@@ -186,6 +186,7 @@ function submitPretest() {
     const formData = new FormData();
     formData.append('lesson_id', <?= $lesson_id ?>);
     formData.append('score', score);
+    formData.append('full_score', total);
     formData.append('test_type', '<?= $test_type_param === 'post' ? 'POST' : 'PRE' ?>');
 
     fetch('page/save_score.php', {

@@ -22,36 +22,40 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
 
     // We assume $mysqli is available from index.php
     
-    // --- Handle Score Submission (Pre/Post Test) ---
+    // --- Handle Score Submission (Pre/Post Test via tb_scores) ---
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_exam_score'])) {
-        $student_id = $_POST['student_id'];
+        $member_id = (int)$_POST['member_id']; // Using PK
         $exam_type = $_POST['exam_type'];
         $score = (int)$_POST['score'];
         $full_score = (int)$_POST['full_score'];
         
-        // Check if record exists
-        $check_sql = "SELECT id FROM tb_exam_scores WHERE student_id = ? AND exam_type = ?";
-        $stmt = $mysqli->prepare($check_sql);
-        $stmt->bind_param("ss", $student_id, $exam_type);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // Map exam_type to lesson_id and test_type
+        $lesson_id = 0;
+        $test_type = 'QUIZ';
         
-        if ($result->num_rows > 0) {
-            // Update
-            $update_sql = "UPDATE tb_exam_scores SET score = ?, full_score = ? WHERE student_id = ? AND exam_type = ?";
-            $stmt = $mysqli->prepare($update_sql);
-            $stmt->bind_param("iiss", $score, $full_score, $student_id, $exam_type);
-            $stmt->execute();
-        } else {
-            // Insert
-            $insert_sql = "INSERT INTO tb_exam_scores (student_id, exam_type, score, full_score) VALUES (?, ?, ?, ?)";
-            $stmt = $mysqli->prepare($insert_sql);
-            $stmt->bind_param("ssii", $student_id, $exam_type, $score, $full_score);
-            $stmt->execute();
+        if ($exam_type === 'pre_test') {
+            $lesson_id = 1; // Default Pre-test to Lesson 1
+            $test_type = 'PRE';
+        } elseif ($exam_type === 'post_test') {
+            $lesson_id = 12; // Default Post-test to Lesson 12
+            $test_type = 'POST';
         }
         
-        // Redirect to avoid resubmission
-        echo "<script>window.location.href = 'index.php?p=user_list';</script>";
+        // Delete old record for this specific test
+        $del_sql = "DELETE FROM tb_scores WHERE member_id = ? AND lesson_id = ? AND test_type = ?";
+        $stmt = $mysqli->prepare($del_sql);
+        $stmt->bind_param('iis', $member_id, $lesson_id, $test_type);
+        $stmt->execute();
+        $stmt->close();
+        
+        // Insert new record
+        $insert_sql = "INSERT INTO tb_scores (member_id, lesson_id, score, full_score, test_type) VALUES (?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($insert_sql);
+        $stmt->bind_param("iiiis", $member_id, $lesson_id, $score, $full_score, $test_type);
+        $stmt->execute();
+        
+        // Redirect
+        echo "<script>window.location.href = 'index.php?page=user';</script>";
         exit;
     }
 
@@ -96,13 +100,18 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
         }
     }
     
-    // 5. Get all quiz scores for all students
+    // 5. Get all scores (QUIZ, PRE, POST) from tb_scores
+    // Structure: $scores_data[member_id][lesson_id][test_type] = row_data
     $score_result = $mysqli->query(
-        "SELECT member_id, lesson_id, MAX(score) as max_score FROM tb_scores GROUP BY member_id, lesson_id"
+        "SELECT member_id, lesson_id, test_type, score, full_score FROM tb_scores"
     );
     if ($score_result) {
         while ($row = $score_result->fetch_assoc()) {
-            $scores_data[$row['member_id']][$row['lesson_id']] = $row['max_score'];
+            $type = strtoupper($row['test_type']);
+            // Ensure QUIZ maps correctly if legacy data exists, otherwise standard 'QUIZ', 'PRE', 'POST'
+            if (empty($type)) $type = 'QUIZ';
+            
+            $scores_data[$row['member_id']][$row['lesson_id']][$type] = $row;
         }
     }
 
@@ -114,14 +123,6 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
         while ($row = $submission_result->fetch_assoc()) {
             // Store the latest submission for each work
             $submissions_data[$row['student_id']][$row['work_id']] = $row;
-        }
-    }
-
-    // 7. Get Pre/Post Test Scores
-    $exam_result = $mysqli->query("SELECT student_id, exam_type, score, full_score FROM tb_exam_scores");
-    if ($exam_result) {
-        while ($row = $exam_result->fetch_assoc()) {
-            $exam_scores[$row['student_id']][$row['exam_type']] = $row;
         }
     }
 ?>
@@ -164,7 +165,7 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                         <thead class="table-light">
                                                             <tr>
                                                                 <th>บทเรียน</th>
-                                                                <th class="text-center">คะแนน (เต็ม 100)</th>
+                                                                <th class="text-center">คะแนน (เต็ม 20)</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -176,11 +177,20 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                         <td>บทที่ <?= htmlspecialchars($lesson_id) ?>: <?= htmlspecialchars($lesson_name) ?></td>
                                                                         <td class="text-center">
                                                                             <?php
-                                                                            if (isset($scores_data[$student_pk]) && isset($scores_data[$student_pk][$lesson_id])) {
-                                                                                $score = (int)$scores_data[$student_pk][$lesson_id];
-                                                                                $total = isset($total_points[$lesson_id]) ? (int)$total_points[$lesson_id] : 0;
-                                                                                $percentage = ($total > 0) ? round(($score / $total) * 100) : 0;
-                                                                                echo '<span class="text-success fw-bold">✓ ' . $percentage . '</span>';
+                                                                            // Fetch QUIZ score
+                                                                            if (isset($scores_data[$student_pk][$lesson_id]['QUIZ'])) {
+                                                                                $s_row = $scores_data[$student_pk][$lesson_id]['QUIZ'];
+                                                                                $score = (int)$s_row['score'];
+                                                                                $full = (int)$s_row['full_score'];
+                                                                                
+                                                                                // Calculate Score (Scale to 20)
+                                                                                $score_20 = ($full > 0) ? round(($score / $full) * 20, 2) : 0; // Use decimals if needed, or round to int? Prompt says 'Full 20'. Let's keep 2 decimals if needed or just round.
+                                                                                // User usually prefers integers if simple, but 20 is small. 
+                                                                                // "เต็ม 100 เป็น 20".
+                                                                                
+                                                                                echo '<span class="text-success fw-bold">' . $score_20 . '</span>';
+                                                                                // Optional: Tooltip for raw score
+                                                                                echo ' <small class="text-muted" style="font-size:0.7em">(' . $score . '/' . $full . ')</small>';
                                                                             } else {
                                                                                 echo '<span class="text-muted">-</span>';
                                                                             }
@@ -249,18 +259,25 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            <!-- Pre-test -->
+                                                            <!-- Pre-test (Lesson 1) -->
                                                             <tr>
                                                                 <td>สอบก่อนเรียน (Pre-test)</td>
                                                                 <td class="text-center">
                                                                     <?php 
-                                                                    $pre_score = isset($exam_scores[$student_std_id]['pre_test']) ? $exam_scores[$student_std_id]['pre_test']['score'] : '-';
-                                                                    echo $pre_score;
+                                                                    $pre_data = $scores_data[$student_pk][1]['PRE'] ?? null;
+                                                                    if ($pre_data) {
+                                                                        $s = (int)$pre_data['score'];
+                                                                        $f = (int)$pre_data['full_score'];
+                                                                        $p = ($f > 0) ? round(($s/$f)*100) : 0;
+                                                                        echo '<span class="fw-bold text-primary">' . $s . '</span> <span class="text-muted small">(' . $p . '%)</span>';
+                                                                    } else {
+                                                                        echo '-';
+                                                                    }
                                                                     ?>
                                                                 </td>
                                                                 <td class="text-center">
                                                                     <?php 
-                                                                    $pre_full = isset($exam_scores[$student_std_id]['pre_test']) ? $exam_scores[$student_std_id]['pre_test']['full_score'] : '100';
+                                                                    $pre_full = $pre_data ? $pre_data['full_score'] : '100';
                                                                     echo $pre_full;
                                                                     ?>
                                                                 </td>
@@ -275,7 +292,7 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                 <td colspan="4" class="bg-light">
                                                                     <form method="POST" class="row g-2 align-items-center justify-content-end">
                                                                         <input type="hidden" name="save_exam_score" value="1">
-                                                                        <input type="hidden" name="student_id" value="<?= $student_std_id ?>">
+                                                                        <input type="hidden" name="member_id" value="<?= $student_pk ?>">
                                                                         <input type="hidden" name="exam_type" value="pre_test">
                                                                         <div class="col-auto">
                                                                             <label class="col-form-label btn-sm">คะแนน:</label>
@@ -296,18 +313,25 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                 </td>
                                                             </tr>
 
-                                                            <!-- Post-test -->
+                                                            <!-- Post-test (Lesson 12) -->
                                                             <tr>
                                                                 <td>สอบหลังเรียน (Post-test)</td>
                                                                 <td class="text-center">
                                                                     <?php 
-                                                                    $post_score = isset($exam_scores[$student_std_id]['post_test']) ? $exam_scores[$student_std_id]['post_test']['score'] : '-';
-                                                                    echo $post_score;
+                                                                    $post_data = $scores_data[$student_pk][1]['POST'] ?? null;
+                                                                    if ($post_data) {
+                                                                        $s = (int)$post_data['score'];
+                                                                        $f = (int)$post_data['full_score'];
+                                                                        $p = ($f > 0) ? round(($s/$f)*100) : 0;
+                                                                        echo '<span class="fw-bold text-success">' . $s . '</span> <span class="text-muted small">(' . $p . '%)</span>';
+                                                                    } else {
+                                                                        echo '-';
+                                                                    }
                                                                     ?>
                                                                 </td>
                                                                 <td class="text-center">
                                                                     <?php 
-                                                                    $post_full = isset($exam_scores[$student_std_id]['post_test']) ? $exam_scores[$student_std_id]['post_test']['full_score'] : '100';
+                                                                    $post_full = $post_data ? $post_data['full_score'] : '100';
                                                                     echo $post_full;
                                                                     ?>
                                                                 </td>
@@ -322,7 +346,7 @@ if (!isset($_SESSION['sess_username']) || $_SESSION['sess_username'] !== 'kamol'
                                                                 <td colspan="4" class="bg-light">
                                                                     <form method="POST" class="row g-2 align-items-center justify-content-end">
                                                                         <input type="hidden" name="save_exam_score" value="1">
-                                                                        <input type="hidden" name="student_id" value="<?= $student_std_id ?>">
+                                                                        <input type="hidden" name="member_id" value="<?= $student_pk ?>">
                                                                         <input type="hidden" name="exam_type" value="post_test">
                                                                         <div class="col-auto">
                                                                             <label class="col-form-label btn-sm">คะแนน:</label>
